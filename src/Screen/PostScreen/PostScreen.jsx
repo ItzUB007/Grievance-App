@@ -22,6 +22,7 @@ import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import storage from '@react-native-firebase/storage';
 import DocumentPicker from 'react-native-document-picker';
+import RNFetchBlob from 'rn-fetch-blob';
 
 const PostScreen = () => {
   const [categories, setCategories] = useState([]);
@@ -55,6 +56,7 @@ const PostScreen = () => {
       checkAndRequestPermissions();
     };
 
+
     const fetchUserInfo = async () => {
       const user = auth().currentUser;
       if (user) {
@@ -66,163 +68,169 @@ const PostScreen = () => {
         }
       }
     };
-
+    // getRealPathFromURI()
     fetchCategories();
     fetchUserInfo();
   }, []);
 
+  const getRealPathFromURI = async (uri) => {
+    if (Platform.OS === 'android' && uri.startsWith('content://')) {
+        const filePath = await RNFetchBlob.fs.stat(uri);
+        return filePath.path;
+    }
+    return uri;
+};
   const checkAndRequestPermissions = async () => {
     if (Platform.OS === 'android') {
-      try {
-        const readImagesGranted = await PermissionsAndroid.check(
-          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
-        );
-        const readVideosGranted = await PermissionsAndroid.check(
-          PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO
-        );
-        const readAudioGranted = await PermissionsAndroid.check(
-          PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO
-        );
-        
+        try {
+            const permissions = [
+                PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+                PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
+                PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO,
+                // PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+                // PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+            ];
 
-        if (!readImagesGranted || !readVideosGranted || !readAudioGranted) {
-          const granted = await PermissionsAndroid.requestMultiple([
-            PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
-            PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
-            PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO,
-          ]);
+            const granted = await PermissionsAndroid.requestMultiple(permissions);
 
-          if (
-            granted['android.permission.READ_MEDIA_IMAGES'] === PermissionsAndroid.RESULTS.GRANTED &&
-            granted['android.permission.READ_MEDIA_VIDEO'] === PermissionsAndroid.RESULTS.GRANTED &&
-            granted['android.permission.READ_MEDIA_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED
-          ) {
-            console.log('Media permissions granted');
-            return true;
-          } else {
-            console.log('Media permissions denied');
-            Alert.alert(
-              'Permission Denied',
-              'Media permissions are required to upload documents. Please enable them in the app settings.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Open Settings', onPress: () => openAppSettings() },
-              ]
-            );
+            const allGranted = permissions.every(permission => granted[permission] === PermissionsAndroid.RESULTS.GRANTED);
+
+            if (allGranted) {
+                console.log('All required permissions granted');
+                return true;
+            } else {
+                console.log('Permissions denied');
+                Alert.alert(
+                    'Permission Denied',
+                    'Media and storage permissions are required to upload documents. Please enable them in the app settings.',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Open Settings', onPress: () => openAppSettings() },
+                    ]
+                );
+                return false;
+            }
+        } catch (err) {
+            console.warn(err);
+            Alert.alert('Permission Error', 'An error occurred while requesting media and storage permissions.');
             return false;
-          }
-        } else {
-          return true;
         }
-      } catch (err) {
-        console.warn(err);
-        Alert.alert('Permission Error', 'An error occurred while requesting media permissions.');
-        return false;
-      }
     } else {
-      return true; // Assuming permissions are granted on iOS or other platforms
-    }
-  };
-
-  const openAppSettings = () => {
-    Linking.openSettings();
-  };
-
-  const pickDocuments = async () => {
-    const hasPermission = await checkAndRequestPermissions();
-    if (!hasPermission) {
-        return;
-    }
-
-    try {
-        const res = await DocumentPicker.pick({
-            type: [DocumentPicker.types.images, DocumentPicker.types.pdf],
-        });
-        setDocuments([...documents, res]);
-        // console.log(res);
-    } catch (err) {
-        if (DocumentPicker.isCancel(err)) {
-            console.log('User cancelled document picker');
-        } else {
-            console.log('Unknown error: ', err);
-            Alert.alert('Document Picker Error', 'An error occurred while picking documents.');
-            throw err;
-        }
+        return true; // Assuming permissions are granted on iOS or other platforms
     }
 };
 
+const openAppSettings = () => {
+    Linking.openSettings();
+};
+
+
+ 
+
+const pickDocuments = async () => {
+  const hasPermission = await checkAndRequestPermissions();
+  if (!hasPermission) {
+      return;
+  }
+
+  try {
+      const res = await DocumentPicker.pick({
+          type: [DocumentPicker.types.images, DocumentPicker.types.pdf],
+      });
+      setDocuments(res);
+      // Log the documents
+      console.log(res);
+  } catch (err) {
+      if (DocumentPicker.isCancel(err)) {
+          console.log('User cancelled document picker');
+      } else {
+          console.log('Unknown error: ', err);
+          Alert.alert('Document Picker Error', 'An error occurred while picking documents.');
+          throw err;
+      }
+  }
+};
+
+
+ // const openAppSettings = () => {
+  //   Linking.openSettings();
+  // };
+
   const onSubmit = async () => {
     if (!selectedCategory || !subject || !description || !fullName || !phoneNo || !gender) {
-      Alert.alert('All fields are required!');
-      return;
+        Alert.alert('All fields are required!');
+        return;
     }
 
     setLoading(true);
 
     try {
-      const user = auth().currentUser;
-      const userEmail = user.email;
-      const userId = user.uid;
-      const createdOn = new Date();
+        const user = auth().currentUser;
+        const userEmail = user.email;
+        const userId = user.uid;
+        const createdOn = new Date();
 
-      const ticketData = {
-        assigned_to: '',
-        category: selectedCategory,
-        created_on: createdOn,
-        description: description,
-        priority: priority,
-        resolved_on: '',
-        status: 'Open',
-        subject: subject,
-        updated_on: createdOn,
-        user_email: userEmail,
-        user_id: userId,
-        fullName: fullName,
-        phoneNo: phoneNo,
-        gender: gender,
-        dob: dob.toDateString(),
-        category_id: categories.find(category => category.categoryName === selectedCategory)?.id || '',
-        applicationMethod: applicationMethod,
-        documentRequired: documentRequired,
-      };
+        const ticketData = {
+            assigned_to: '',
+            category: selectedCategory,
+            created_on: createdOn,
+            description: description,
+            priority: priority,
+            resolved_on: '',
+            status: 'Open',
+            subject: subject,
+            updated_on: createdOn,
+            user_email: userEmail,
+            user_id: userId,
+            fullName: fullName,
+            phoneNo: phoneNo,
+            gender: gender,
+            dob: dob.toDateString(),
+            category_id: categories.find(category => category.categoryName === selectedCategory)?.id || '',
+            applicationMethod: applicationMethod,
+            documentRequired: documentRequired,
+        };
 
-      const ticketRef = await firestore().collection('Tickets').add(ticketData);
+        const ticketRef = await firestore().collection('Tickets').add(ticketData);
 
-      console.log('DOCS'+documents)
+        console.log('DOCS', documents);
 
-      for (const doc of documents) {
+        for (const doc of documents) {
+            console.log('Document', doc);
+            if (!doc.uri) {
+                console.error('Document URI is undefined:', doc);
+                continue;
+            }
 
-        console.log('Document'+doc[0]);
-        if (!doc.uri) {
-          console.error('Document URI is undefined:', doc);
-          continue;
+            const fileRef = storage().ref(`documents/${userId}/${Date.now()}_${doc.name}`);
+            const localUri = await getRealPathFromURI(doc.uri);
+
+            await fileRef.putFile(localUri);
+            const filePath = await fileRef.getDownloadURL();
+            await firestore().collection('Tickets').doc(ticketRef.id).collection('Attachments').add({
+                file_name: doc.name,
+                file_path: filePath,
+            });
         }
 
-        const fileRef = storage().ref(`documents/${userId}/${Date.now()}_${doc.name}`);
-        
-        await fileRef.putFile(doc.uri.replace('file://', ''));
-        const filePath = await fileRef.getDownloadURL();
-        await firestore().collection('Tickets').doc(ticketRef.id).collection('Attachments').add({
-          file_name: doc.name,
-          file_path: filePath,
-        });
-      }
-
-      setLoading(false);
-      Alert.alert('Ticket submitted successfully!');
-      setSelectedCategory('');
-      setSubject('');
-      setDescription('');
-      setGender('Male');
-      setDob(new Date());
-      setPriority('High');
-      setDocuments([]);
+        setLoading(false);
+        Alert.alert('Ticket submitted successfully!');
+        setSelectedCategory('');
+        setSubject('');
+        setDescription('');
+        setGender('Male');
+        setDob(new Date());
+        setPriority('High');
+        setDocuments([]);
     } catch (error) {
-      setLoading(false);
-      console.error('Error submitting ticket: ', error);
-      Alert.alert('Error submitting ticket. Please try again.');
+        setLoading(false);
+        console.error('Error submitting ticket: ', error);
+        Alert.alert('Error submitting ticket. Please try again.');
     }
-  };
+};
+
+
+
 
   const showDatepicker = () => {
     setShowDatePicker(true);
