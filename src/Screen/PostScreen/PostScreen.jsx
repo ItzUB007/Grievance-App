@@ -57,20 +57,20 @@ const PostScreen = () => {
     };
 
 
-    const fetchUserInfo = async () => {
-      const user = auth().currentUser;
-      if (user) {
-        const userDoc = await firestore().collection('users').doc(user.uid).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          setFullName(userData.displayName);
-          setPhoneNo(userData.phoneNumber);
-        }
-      }
-    };
+    // const fetchUserInfo = async () => {
+    //   const user = auth().currentUser;
+    //   if (user) {
+    //     const userDoc = await firestore().collection('users').doc(user.uid).get();
+    //     if (userDoc.exists) {
+    //       const userData = userDoc.data();
+    //       // setFullName(userData.displayName);
+    //       // setPhoneNo(userData.phoneNumber);
+    //     }
+    //   }
+    // };
     // getRealPathFromURI()
     fetchCategories();
-    fetchUserInfo();
+    // fetchUserInfo();
   }, []);
 
   const getRealPathFromURI = async (uri) => {
@@ -136,10 +136,11 @@ const pickDocuments = async () => {
   try {
       const res = await DocumentPicker.pick({
           type: [DocumentPicker.types.images, DocumentPicker.types.pdf],
+          allowMultiSelection:true
       });
       setDocuments(res);
       // Log the documents
-      console.log(res);
+      console.log('Responce',res);
   } catch (err) {
       if (DocumentPicker.isCancel(err)) {
           console.log('User cancelled document picker');
@@ -311,21 +312,7 @@ const pickDocuments = async () => {
           </View>
         </Modal>
 
-        {applicationMethod && (
-          <>
-            <Text style={styles.label}>Application Method</Text>
-            <Text style={styles.userInfo}>{applicationMethod}</Text>
-          </>
-        )}
-
-        {documentRequired && (
-          <>
-            <Text style={styles.label}>Documents Required</Text>
-            {documentRequired.map((doc, index) => (
-              <Text key={index} style={styles.userInfo}>{doc}</Text>
-            ))}
-          </>
-        )}
+ 
 
         <Text style={styles.label}>Subject</Text>
         <TextInput
@@ -346,10 +333,25 @@ const pickDocuments = async () => {
         />
 
         <Text style={styles.label}>Full Name</Text>
-        {fullName && <Text style={styles.userInfo}>{fullName}</Text>}
+        <TextInput
+        placeholder="Full Name"
+        style={styles.input}
+        value={fullName}
+        onChangeText={setFullName}
+        placeholderTextColor="gray"
+      />
+      <Text style={styles.label}>Phone Number</Text>
+      <TextInput
+        placeholder="Phone Number"
+        style={styles.input}
+        value={phoneNo}
+        onChangeText={setPhoneNo}
+        placeholderTextColor="gray"
+        keyboardType="phone-pad"
+      />
 
-        <Text style={styles.label}>Phone Number</Text>
-        {phoneNo && <Text style={styles.userInfo}>{phoneNo}</Text>}
+        
+      
 
         <Text style={styles.label}>Select Gender</Text>
         <Picker
@@ -386,10 +388,27 @@ const pickDocuments = async () => {
           <Picker.Item label="Low" value="Low" />
         </Picker>
 
-        <Text style={styles.label}>Upload Documents</Text>
+        {/* <Text style={styles.label}>Upload Documents</Text>
         <TouchableOpacity style={styles.uploadButton} onPress={pickDocuments}>
           <Text style={styles.uploadButtonText}>Upload Documents</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+        {applicationMethod && (
+          <>
+            <Text style={styles.label}>Application Method</Text>
+            <Text style={styles.userInfo}>{applicationMethod}</Text>
+          </>
+        )}
+
+       {documentRequired && (
+          <>
+            <Text style={styles.label}>Documents Required - Upload Documents</Text>
+            {documentRequired.map((doc, index) => (
+              <TouchableOpacity key={index} style={styles.uploadButton} onPress={pickDocuments}>
+              <Text style={styles.uploadButtonText} >{doc}</Text>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
 
         <Text style={styles.label}>Uploaded Documents</Text>
         {documents.map((doc, index) => (
