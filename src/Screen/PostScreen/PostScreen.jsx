@@ -127,20 +127,22 @@ const openAppSettings = () => {
 
  
 
-const pickDocuments = async () => {
+const pickDocuments = async (docName) => {
   const hasPermission = await checkAndRequestPermissions();
   if (!hasPermission) {
       return;
   }
-
+  console.log(docName)
   try {
       const res = await DocumentPicker.pick({
           type: [DocumentPicker.types.images, DocumentPicker.types.pdf],
           allowMultiSelection:true
       });
-      setDocuments(res);
+      
+       res[0].docName = docName;
+      setDocuments([...documents,res[0]]);
       // Log the documents
-      console.log('Responce',res);
+      console.log('Responce',res[0]);
   } catch (err) {
       if (DocumentPicker.isCancel(err)) {
           console.log('User cancelled document picker');
@@ -194,22 +196,25 @@ const pickDocuments = async () => {
 
         const ticketRef = await firestore().collection('Tickets').add(ticketData);
 
-        console.log('DOCS', documents);
+        
+        // console.log(ticketRef)
 
+        // console.log('DOCS', documents);
+        let index = 0;
         for (const doc of documents) {
             console.log('Document', doc);
             if (!doc.uri) {
                 console.error('Document URI is undefined:', doc);
                 continue;
-            }
+            } 
 
-            const fileRef = storage().ref(`documents/${userId}/${Date.now()}_${doc.name}`);
+            const fileRef =  storage().ref(`documents/${ticketRef.id}/${Date.now()}_${doc.docName}`);
             const localUri = await getRealPathFromURI(doc.uri);
 
             await fileRef.putFile(localUri);
             const filePath = await fileRef.getDownloadURL();
             await firestore().collection('Tickets').doc(ticketRef.id).collection('Attachments').add({
-                file_name: doc.name,
+                file_name: doc.docName,
                 file_path: filePath,
             });
         }
@@ -223,6 +228,8 @@ const pickDocuments = async () => {
         setDob(new Date());
         setPriority('High');
         setDocuments([]);
+        setFullName('')
+        setPhoneNo('')
     } catch (error) {
         setLoading(false);
         console.error('Error submitting ticket: ', error);
@@ -350,13 +357,10 @@ const pickDocuments = async () => {
         keyboardType="phone-pad"
       />
 
-        
-      
-
         <Text style={styles.label}>Select Gender</Text>
         <Picker
           selectedValue={gender}
-          onValueChange={(itemValue, itemIndex) => setGender(itemValue)}
+          onValueChange={(itemValue) => setGender(itemValue)}
           style={styles.input}
         >
           <Picker.Item label="Male" value="Male" />
@@ -403,7 +407,7 @@ const pickDocuments = async () => {
           <>
             <Text style={styles.label}>Documents Required - Upload Documents</Text>
             {documentRequired.map((doc, index) => (
-              <TouchableOpacity key={index} style={styles.uploadButton} onPress={pickDocuments}>
+              <TouchableOpacity key={index} style={styles.uploadButton} onPress={()=>pickDocuments(doc)}>
               <Text style={styles.uploadButtonText} >{doc}</Text>
               </TouchableOpacity>
             ))}
