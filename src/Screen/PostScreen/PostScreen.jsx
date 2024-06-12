@@ -41,7 +41,7 @@ const PostScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [applicationMethod, setApplicationMethod] = useState('');
   const [documentRequired, setDocumentRequired] = useState([]);
-  const [documents, setDocuments] = useState([]);
+  var [documents, setDocuments] = useState([]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -74,168 +74,193 @@ const PostScreen = () => {
   }, []);
 
   const getRealPathFromURI = async (uri) => {
-    if (Platform.OS === 'android' && uri.startsWith('content://')) {
+    try {
+      if (Platform.OS === 'android' && uri.startsWith('content://')) {
         const filePath = await RNFetchBlob.fs.stat(uri);
+        console.log(`File path: ${filePath.path}`);
         return filePath.path;
+      }
+      return uri;
+    } catch (error) {
+      console.error(`Error getting real path: ${error}`);
+      return null;
     }
-    return uri;
-};
+  };
+  
   const checkAndRequestPermissions = async () => {
     if (Platform.OS === 'android') {
-        try {
-            const permissions = [
-                PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
-                PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
-                PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO,
-                // PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-                // PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-            ];
+      try {
+        const permissions = [
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO,
+          // PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          // PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+        ];
 
-            const granted = await PermissionsAndroid.requestMultiple(permissions);
+        const granted = await PermissionsAndroid.requestMultiple(permissions);
 
-            const allGranted = permissions.every(permission => granted[permission] === PermissionsAndroid.RESULTS.GRANTED);
+        const allGranted = permissions.every(permission => granted[permission] === PermissionsAndroid.RESULTS.GRANTED);
 
-            if (allGranted) {
-                console.log('All required permissions granted');
-                return true;
-            } else {
-                console.log('Permissions denied');
-                Alert.alert(
-                    'Permission Denied',
-                    'Media and storage permissions are required to upload documents. Please enable them in the app settings.',
-                    [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Open Settings', onPress: () => openAppSettings() },
-                    ]
-                );
-                return false;
-            }
-        } catch (err) {
-            console.warn(err);
-            Alert.alert('Permission Error', 'An error occurred while requesting media and storage permissions.');
-            return false;
+        if (allGranted) {
+          console.log('All required permissions granted');
+          return true;
+        } else {
+          console.log('Permissions denied');
+          Alert.alert(
+            'Permission Denied',
+            'Media and storage permissions are required to upload documents. Please enable them in the app settings.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => openAppSettings() },
+            ]
+          );
+          return false;
         }
-    } else {
-        return true; // Assuming permissions are granted on iOS or other platforms
-    }
-};
-
-const openAppSettings = () => {
-    Linking.openSettings();
-};
-
-
- 
-
-const pickDocuments = async (docName) => {
-  const hasPermission = await checkAndRequestPermissions();
-  if (!hasPermission) {
-      return;
-  }
-  console.log(docName)
-  try {
-      const res = await DocumentPicker.pick({
-          type: [DocumentPicker.types.images, DocumentPicker.types.pdf],
-          allowMultiSelection:true
-      });
-      
-       res[0].docName = docName;
-      setDocuments([...documents,res[0]]);
-      // Log the documents
-      console.log('Responce',res[0]);
-  } catch (err) {
-      if (DocumentPicker.isCancel(err)) {
-          console.log('User cancelled document picker');
-      } else {
-          console.log('Unknown error: ', err);
-          Alert.alert('Document Picker Error', 'An error occurred while picking documents.');
-          throw err;
+      } catch (err) {
+        console.warn(err);
+        Alert.alert('Permission Error', 'An error occurred while requesting media and storage permissions.');
+        return false;
       }
-  }
-};
+    } else {
+      return true; // Assuming permissions are granted on iOS or other platforms
+    }
+  };
+
+  const openAppSettings = () => {
+    Linking.openSettings();
+  };
 
 
- // const openAppSettings = () => {
+
+
+  const pickDocuments = async (docName) => {
+    const hasPermission = await checkAndRequestPermissions();
+    if (!hasPermission) {
+      return;
+    }
+    try {
+      const res = await DocumentPicker.pick({
+        type: [DocumentPicker.types.images, DocumentPicker.types.pdf],
+        allowMultiSelection: true,
+      });
+  
+      res.forEach(doc => {
+        console.log(`Picked document URI: ${doc.uri}, type: ${doc.type}`);
+      });
+  
+      // Add docName to the picked document
+      res[0].docName = docName;
+  
+      // Check if the document name already exists and replace it
+      const updatedDocuments = documents.map(doc =>
+        doc.docName === docName ? res[0] : doc
+      );
+  
+      // If the document name does not exist, add the new document
+      const isNewDoc = !documents.some(doc => doc.docName === docName);
+      if (isNewDoc) {
+        updatedDocuments.push(res[0]);
+      }
+  
+      setDocuments(updatedDocuments);
+  
+      // Log the documents
+      console.log('Updated documents:', updatedDocuments);
+    } catch (err) {
+      if (DocumentPicker.isCancel(err)) {
+        console.log('User cancelled document picker');
+      } else {
+        console.error('Document Picker Error:', err);
+        Alert.alert('Document Picker Error', 'An error occurred while picking documents.');
+        throw err;
+      }
+    }
+  };
+  
+
+
+  // const openAppSettings = () => {
   //   Linking.openSettings();
   // };
 
   const onSubmit = async () => {
     if (!selectedCategory || !subject || !description || !fullName || !phoneNo || !gender) {
-        Alert.alert('All fields are required!');
-        return;
+      Alert.alert('All fields are required!');
+      return;
     }
-
+  
     setLoading(true);
-
+  
     try {
-        const user = auth().currentUser;
-        const userEmail = user.email;
-        const userId = user.uid;
-        const createdOn = new Date();
-
-        const ticketData = {
-            assigned_to: '',
-            category: selectedCategory,
-            created_on: createdOn,
-            description: description,
-            priority: priority,
-            resolved_on: '',
-            status: 'Open',
-            subject: subject,
-            updated_on: createdOn,
-            user_email: userEmail,
-            user_id: userId,
-            fullName: fullName,
-            phoneNo: phoneNo,
-            gender: gender,
-            dob: dob.toDateString(),
-            category_id: categories.find(category => category.categoryName === selectedCategory)?.id || '',
-            applicationMethod: applicationMethod,
-            documentRequired: documentRequired,
-        };
-
-        const ticketRef = await firestore().collection('Tickets').add(ticketData);
-
-        
-        // console.log(ticketRef)
-
-        // console.log('DOCS', documents);
-        let index = 0;
-        for (const doc of documents) {
-            console.log('Document', doc);
-            if (!doc.uri) {
-                console.error('Document URI is undefined:', doc);
-                continue;
-            } 
-
-            const fileRef =  storage().ref(`documents/${ticketRef.id}/${Date.now()}_${doc.docName}`);
-            const localUri = await getRealPathFromURI(doc.uri);
-
-            await fileRef.putFile(localUri);
-            const filePath = await fileRef.getDownloadURL();
-            await firestore().collection('Tickets').doc(ticketRef.id).collection('Attachments').add({
-                file_name: doc.docName,
-                file_path: filePath,
-            });
+      const user = auth().currentUser;
+      const userEmail = user.email;
+      const userId = user.uid;
+      const createdOn = new Date();
+  
+      const ticketData = {
+        assigned_to: '',
+        category: selectedCategory,
+        created_on: createdOn,
+        description: description,
+        priority: priority,
+        resolved_on: '',
+        status: 'Open',
+        subject: subject,
+        updated_on: createdOn,
+        user_email: userEmail,
+        user_id: userId,
+        fullName: fullName,
+        phoneNo: phoneNo,
+        gender: gender,
+        dob: dob.toDateString(),
+        category_id: categories.find(category => category.categoryName === selectedCategory)?.id || '',
+        applicationMethod: applicationMethod,
+        documentRequired: documentRequired,
+      };
+  
+      const ticketRef = await firestore().collection('Tickets').add(ticketData);
+  
+      for (const doc of documents) {
+        console.log('Processing document:', doc);
+        if (!doc.uri) {
+          console.error('Document URI is undefined:', doc);
+          continue;
         }
-
-        setLoading(false);
-        Alert.alert('Ticket submitted successfully!');
-        setSelectedCategory('');
-        setSubject('');
-        setDescription('');
-        setGender('Male');
-        setDob(new Date());
-        setPriority('High');
-        setDocuments([]);
-        setFullName('')
-        setPhoneNo('')
+  
+        const localUri = await getRealPathFromURI(doc.uri);
+        if (!localUri) {
+          console.error('Failed to get real path for URI:', doc.uri);
+          continue;
+        }
+  
+        const fileRef = storage().ref(`documents/${ticketRef.id}/${Date.now()}_${doc.docName}`);
+        await fileRef.putFile(localUri);
+        const filePath = await fileRef.getDownloadURL();
+        await firestore().collection('Tickets').doc(ticketRef.id).collection('Attachments').add({
+          file_name: doc.docName,
+          file_path: filePath,
+        });
+      }
+  
+      setLoading(false);
+      Alert.alert('Ticket submitted successfully!');
+      setSelectedCategory('');
+      setSubject('');
+      setDescription('');
+      setGender('Male');
+      setDob(new Date());
+      setPriority('High');
+      setDocuments([]);
+      setFullName('');
+      setPhoneNo('');
     } catch (error) {
-        setLoading(false);
-        console.error('Error submitting ticket: ', error);
-        Alert.alert('Error submitting ticket. Please try again.');
+      setLoading(false);
+      console.error('Error submitting ticket: ', error);
+      Alert.alert('Error submitting ticket. Please try again.');
     }
-};
+  };
+  
 
 
 
@@ -319,7 +344,7 @@ const pickDocuments = async (docName) => {
           </View>
         </Modal>
 
- 
+
 
         <Text style={styles.label}>Subject</Text>
         <TextInput
@@ -341,21 +366,21 @@ const pickDocuments = async (docName) => {
 
         <Text style={styles.label}>Full Name</Text>
         <TextInput
-        placeholder="Full Name"
-        style={styles.input}
-        value={fullName}
-        onChangeText={setFullName}
-        placeholderTextColor="gray"
-      />
-      <Text style={styles.label}>Phone Number</Text>
-      <TextInput
-        placeholder="Phone Number"
-        style={styles.input}
-        value={phoneNo}
-        onChangeText={setPhoneNo}
-        placeholderTextColor="gray"
-        keyboardType="phone-pad"
-      />
+          placeholder="Full Name"
+          style={styles.input}
+          value={fullName}
+          onChangeText={setFullName}
+          placeholderTextColor="gray"
+        />
+        <Text style={styles.label}>Phone Number</Text>
+        <TextInput
+          placeholder="Phone Number"
+          style={styles.input}
+          value={phoneNo}
+          onChangeText={setPhoneNo}
+          placeholderTextColor="gray"
+          keyboardType="phone-pad"
+        />
 
         <Text style={styles.label}>Select Gender</Text>
         <Picker
@@ -403,12 +428,12 @@ const pickDocuments = async (docName) => {
           </>
         )}
 
-       {documentRequired && (
+        {documentRequired && (
           <>
             <Text style={styles.label}>Documents Required - Upload Documents</Text>
             {documentRequired.map((doc, index) => (
-              <TouchableOpacity key={index} style={styles.uploadButton} onPress={()=>pickDocuments(doc)}>
-              <Text style={styles.uploadButtonText} >{doc}</Text>
+              <TouchableOpacity key={index} style={styles.uploadButton} onPress={() => pickDocuments(doc)}>
+                <Text style={styles.uploadButtonText} >{doc}</Text>
               </TouchableOpacity>
             ))}
           </>
