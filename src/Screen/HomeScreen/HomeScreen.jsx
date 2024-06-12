@@ -1,9 +1,28 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import  ManageExternalStorage  from 'react-native-manage-external-storage';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
+ 
+
+
+
+  const [result, setResult] = useState(false);
+  useEffect(() => {
+     async function AskPermission() {
+     await ManageExternalStorage.checkAndGrantPermission(
+            err => { 
+              setResult(false)
+           },
+           res => {
+            setResult(true)
+           },
+         )
+    }
+      AskPermission()  // This function is only executed once if the user allows the permission and this package retains that permission 
+   }, []);
 
   return (
     <View style={styles.container}>

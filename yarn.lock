@@ -5951,6 +5951,11 @@ react-native-gesture-handler@^2.16.2, "react-native-gesture-handler@>= 1.0.0":
     lodash "^4.17.21"
     prop-types "^15.7.2"
 
+react-native-manage-external-storage@^0.1.8:
+  version "0.1.8"
+  resolved "https://registry.npmjs.org/react-native-manage-external-storage/-/react-native-manage-external-storage-0.1.8.tgz"
+  integrity sha512-ft8jDTVvAV04SyvGa2hlkiaNX/S+tsQ1kx2kSkc80jRUYSmO7C5MguJPqrr4EO+J2TpPHnWq4fst8HNrtPcbzQ==
+
 react-native-modal@^13.0.1:
   version "13.0.1"
   resolved "https://registry.npmjs.org/react-native-modal/-/react-native-modal-13.0.1.tgz"

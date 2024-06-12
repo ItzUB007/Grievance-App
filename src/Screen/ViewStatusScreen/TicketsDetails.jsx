@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Linking, TouchableOpacity,Button, PermissionsAndroid, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet,
+   Linking, TouchableOpacity,Button,
+    PermissionsAndroid, Platform, NativeModules } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import RNFetchBlob from 'rn-fetch-blob';
+
+
 
 // Helper function to format Firestore Timestamp
 const formatDate = (timestamp) => {
@@ -68,28 +72,45 @@ const TicketDetails = ({ route }) => {
     });
   };   
 
-  async function requestManageAllFilesPermission() {
-    try {
-      if (Platform.OS === 'android' ) {
-        // Check if permission is already granted
-        const result = await PermissionsAndroid.MANAGE_EXTERNAL_STORAGE;
-        if (result === PermissionsAndroid.RESULTS.GRANTED) {
-          console.log('The permission is granted');
-          return;
-        }
-  
-        // Request permission
-        const requestResult = await PermissionsAndroid.MANAGE_EXTERNAL_STORAGE;
-        if (requestResult === PermissionsAndroid.RESULTS.GRANTED) {
-          console.log('User granted the permission');
-        } else {
-          console.log('User denied or blocked the permission');
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to request permission', error);
-    }
-  }
+ 
+
+     // This function is only executed once if the user allows the permission and this package retains that permission 
+ 
+
+
+
+
+
+
+// const requestStoragePermission = async () => {
+//   try {
+//     const granted = await PermissionsAndroid.request([
+//       PermissionsAndroid.PERMISSIONS.MANAGE_EXTERNAL_STORAGE,
+//       // PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE
+//     ], {
+//       title: 'Give me Storage Permission',
+//       message:
+//         'Adhikar App needs access to your storage ',
+        
+//       buttonNeutral: 'Ask Me Later',
+//       buttonNegative: 'Cancel',
+//       buttonPositive: 'OK',
+//     });
+
+//     // Check if permissions were granted
+//     // const readGranted = granted['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
+//     // const writeGranted = granted['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
+//        const manageGranted = granted['android.permission.MANAGE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
+//     if (manageGranted) {
+//       console.log('You can use the storage');
+//     } else {
+//       console.log('Storage permission denied');
+//     }
+//   } catch (err) {
+//     console.warn(err);
+//   }
+// }
+
 
   return (
     <ScrollView style={styles.container}>
@@ -116,7 +137,7 @@ const TicketDetails = ({ route }) => {
           </TouchableOpacity>
         </View>
       ))}
-      <Button title='Check Permission' onPress={()=> requestManageAllFilesPermission()}/>
+      {/* <Button title='Check Permission' onPress={()=> requestStoragePermission()}/> */}
     </ScrollView>
   );
 };
