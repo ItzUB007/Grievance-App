@@ -52,8 +52,7 @@ const PostScreen = () => {
       }));
       setCategories(categoryData);
       setFilteredCategories(categoryData);
-      // requestStoragePermission();
-      checkAndRequestPermissions();
+   
     };
 
 
@@ -68,9 +67,10 @@ const PostScreen = () => {
     //     }
     //   }
     // };
-    // getRealPathFromURI()
+    
     fetchCategories();
     // fetchUserInfo();
+    checkAndRequestPermissions()
   }, []);
 
   const getRealPathFromURI = async (uri) => {
@@ -87,15 +87,18 @@ const PostScreen = () => {
     }
   };
   
+
+
+  
   const checkAndRequestPermissions = async () => {
     if (Platform.OS === 'android') {
       try {
         const permissions = [
           PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
-          PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
-          PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO,
-          // PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-          // PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          // PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
+          // PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO,
+          
+  
         ];
 
         const granted = await PermissionsAndroid.requestMultiple(permissions);
@@ -103,7 +106,7 @@ const PostScreen = () => {
         const allGranted = permissions.every(permission => granted[permission] === PermissionsAndroid.RESULTS.GRANTED);
 
         if (allGranted) {
-          console.log('All required permissions granted');
+          console.log('All Media required permissions granted');
           return true;
         } else {
           console.log('Permissions denied');
