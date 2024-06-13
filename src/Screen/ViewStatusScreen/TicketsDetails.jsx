@@ -82,34 +82,6 @@ const TicketDetails = ({ route }) => {
 
 
 
-// const requestStoragePermission = async () => {
-//   try {
-//     const granted = await PermissionsAndroid.request([
-//       PermissionsAndroid.PERMISSIONS.MANAGE_EXTERNAL_STORAGE,
-//       // PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE
-//     ], {
-//       title: 'Give me Storage Permission',
-//       message:
-//         'Adhikar App needs access to your storage ',
-        
-//       buttonNeutral: 'Ask Me Later',
-//       buttonNegative: 'Cancel',
-//       buttonPositive: 'OK',
-//     });
-
-//     // Check if permissions were granted
-//     // const readGranted = granted['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
-//     // const writeGranted = granted['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
-//        const manageGranted = granted['android.permission.MANAGE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
-//     if (manageGranted) {
-//       console.log('You can use the storage');
-//     } else {
-//       console.log('Storage permission denied');
-//     }
-//   } catch (err) {
-//     console.warn(err);
-//   }
-// }
 
 
   return (
@@ -135,9 +107,10 @@ const TicketDetails = ({ route }) => {
           <TouchableOpacity onPress={() => Linking.openURL(attachment.file_path)}>
             <Text style={styles.attachmentLink}>View File</Text>
           </TouchableOpacity>
+    
         </View>
       ))}
-      {/* <Button title='Check Permission' onPress={()=> requestStoragePermission()}/> */}
+     
     </ScrollView>
   );
 };

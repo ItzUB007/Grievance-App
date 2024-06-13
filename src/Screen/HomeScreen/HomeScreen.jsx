@@ -21,11 +21,13 @@ const HomeScreen = () => {
            },
          )
     }
+    console.log(result)
       AskPermission()  // This function is only executed once if the user allows the permission and this package retains that permission 
    }, []);
 
   return (
     <View style={styles.container}>
+
       <Text style={styles.title}>Welcome To Adhikar Grievance</Text>
       <TouchableOpacity style={styles.option} onPress={() => navigation.navigate('Post')}>
         <Image source={require('../../Assets/post.png')} style={styles.image} />

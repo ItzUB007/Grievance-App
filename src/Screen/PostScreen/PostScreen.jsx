@@ -12,8 +12,7 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Platform,
-  PermissionsAndroid,
-  Linking,
+  
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
@@ -55,93 +54,17 @@ const PostScreen = () => {
    
     };
 
-
-    // const fetchUserInfo = async () => {
-    //   const user = auth().currentUser;
-    //   if (user) {
-    //     const userDoc = await firestore().collection('users').doc(user.uid).get();
-    //     if (userDoc.exists) {
-    //       const userData = userDoc.data();
-    //       // setFullName(userData.displayName);
-    //       // setPhoneNo(userData.phoneNumber);
-    //     }
-    //   }
-    // };
-    
     fetchCategories();
-    // fetchUserInfo();
-    checkAndRequestPermissions()
+    
   }, []);
 
-  const getRealPathFromURI = async (uri) => {
-    try {
-      if (Platform.OS === 'android' && uri.startsWith('content://')) {
-        const filePath = await RNFetchBlob.fs.stat(uri);
-        console.log(`File path: ${filePath.path}`);
-        return filePath.path;
-      }
-      return uri;
-    } catch (error) {
-      console.error(`Error getting real path: ${error}`);
-      return null;
-    }
-  };
-  
 
 
-  
-  const checkAndRequestPermissions = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const permissions = [
-          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
-          // PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
-          // PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO,
-          
-  
-        ];
-
-        const granted = await PermissionsAndroid.requestMultiple(permissions);
-
-        const allGranted = permissions.every(permission => granted[permission] === PermissionsAndroid.RESULTS.GRANTED);
-
-        if (allGranted) {
-          console.log('All Media required permissions granted');
-          return true;
-        } else {
-          console.log('Permissions denied');
-          Alert.alert(
-            'Permission Denied',
-            'Media and storage permissions are required to upload documents. Please enable them in the app settings.',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Open Settings', onPress: () => openAppSettings() },
-            ]
-          );
-          return false;
-        }
-      } catch (err) {
-        console.warn(err);
-        Alert.alert('Permission Error', 'An error occurred while requesting media and storage permissions.');
-        return false;
-      }
-    } else {
-      return true; // Assuming permissions are granted on iOS or other platforms
-    }
-  };
-
-  const openAppSettings = () => {
-    Linking.openSettings();
-  };
 
 
 
 
   const pickDocuments = async (docName) => {
-    const hasPermission = await checkAndRequestPermissions();
-    if (!hasPermission) {
-      return;
-    }
     try {
       const res = await DocumentPicker.pick({
         type: [DocumentPicker.types.images, DocumentPicker.types.pdf],
@@ -181,12 +104,20 @@ const PostScreen = () => {
     }
   };
   
-
-
-  // const openAppSettings = () => {
-  //   Linking.openSettings();
-  // };
-
+  const getRealPathFromURI = async (uri) => {
+    try {
+      if (Platform.OS === 'android' && uri.startsWith('content://')) {
+        const base64Data = await RNFetchBlob.fs.readFile(uri, 'base64');
+        console.log(`Base64 data: ${base64Data}`);
+        return base64Data;
+      }
+      return uri;
+    } catch (error) {
+      console.error(`Error getting real path: ${error}`);
+      return null;
+    }
+  };
+  
   const onSubmit = async () => {
     if (!selectedCategory || !subject || !description || !fullName || !phoneNo || !gender) {
       Alert.alert('All fields are required!');
@@ -231,14 +162,14 @@ const PostScreen = () => {
           continue;
         }
   
-        const localUri = await getRealPathFromURI(doc.uri);
-        if (!localUri) {
+        const base64Data = await getRealPathFromURI(doc.uri);
+        if (!base64Data) {
           console.error('Failed to get real path for URI:', doc.uri);
           continue;
         }
   
         const fileRef = storage().ref(`documents/${ticketRef.id}/${Date.now()}_${doc.docName}`);
-        await fileRef.putFile(localUri);
+        await fileRef.putString(base64Data, 'base64', { contentType: doc.type });
         const filePath = await fileRef.getDownloadURL();
         await firestore().collection('Tickets').doc(ticketRef.id).collection('Attachments').add({
           file_name: doc.docName,
@@ -263,6 +194,7 @@ const PostScreen = () => {
       Alert.alert('Error submitting ticket. Please try again.');
     }
   };
+  
   
 
 
