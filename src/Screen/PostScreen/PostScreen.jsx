@@ -40,7 +40,7 @@ const PostScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [applicationMethod, setApplicationMethod] = useState('');
   const [documentRequired, setDocumentRequired] = useState([]);
-  var [documents, setDocuments] = useState([]);
+  const [documents, setDocuments] = useState([]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -122,7 +122,11 @@ const PostScreen = () => {
     if (!selectedCategory || !subject || !description || !fullName || !phoneNo || !gender) {
       Alert.alert('All fields are required!');
       return;
-    }
+     } 
+      if (documentRequired.length !== documents.length) {
+        Alert.alert('All Documents are required!');
+        return;
+      }
   
     setLoading(true);
   
