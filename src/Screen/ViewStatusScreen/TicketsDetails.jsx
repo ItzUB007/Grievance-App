@@ -74,15 +74,6 @@ const TicketDetails = ({ route }) => {
 
  
 
-     // This function is only executed once if the user allows the permission and this package retains that permission 
- 
-
-
-
-
-
-
-
 
   return (
     <ScrollView style={styles.container}>
