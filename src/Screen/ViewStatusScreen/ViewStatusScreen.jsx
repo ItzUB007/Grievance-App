@@ -11,6 +11,7 @@ const ViewStatusScreen = ({ navigation }) => {
   const pageSize = 10;
 
   const fetchTickets = async () => {
+    //Added orderBy on the latest status on updated_on 
     let query = firestore()
       .collection('Tickets')
       .where('user_id', '==', currentUserID)
@@ -41,7 +42,7 @@ const ViewStatusScreen = ({ navigation }) => {
         return styles.defaultStatus;
     }
   };
-// Using Simple Pagination Logic
+// Using Simple Pagination Logic 
   const renderTickets = tickets.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   return (
