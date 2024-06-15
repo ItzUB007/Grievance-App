@@ -21,8 +21,8 @@ const HomeScreen = () => {
            },
          )
     }
-    console.log(result)
-      AskPermission()  // This function is only executed once if the user allows the permission and this package retains that permission 
+  
+      // AskPermission()  // This function is only executed once if the user allows the permission and this package retains that permission 
    }, []);
 
   return (

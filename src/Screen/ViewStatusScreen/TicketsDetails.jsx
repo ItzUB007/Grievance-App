@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet,
-   Linking, TouchableOpacity,Button,
-    PermissionsAndroid, Platform, NativeModules } from 'react-native';
+   Linking, TouchableOpacity
+     } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import RNFetchBlob from 'rn-fetch-blob';
 

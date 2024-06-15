@@ -1,28 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Button } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 
 const ViewStatusScreen = ({ navigation }) => {
   const [tickets, setTickets] = useState([]);
+  const [currentPage, setCurrentPage] = useState(0);
   const user = auth().currentUser;
-  const currentUserID = user.uid; // This should be dynamically set based on logged-in user.
+  const currentUserID = user.uid;
+  const pageSize = 10;
 
-  useEffect(() => {
-    const unsubscribe = firestore()
+  const fetchTickets = async () => {
+    let query = firestore()
       .collection('Tickets')
       .where('user_id', '==', currentUserID)
-      .onSnapshot(querySnapshot => {
-        const ticketsArray = querySnapshot.docs.map(documentSnapshot => {
-          return {
-            id: documentSnapshot.id,
-            ...documentSnapshot.data(),
-          };
-        });
-        setTickets(ticketsArray);
-      });
+      .orderBy('updated_on', 'desc');
 
-    return () => unsubscribe();
+    const querySnapshot = await query.get();
+    if (!querySnapshot.empty) {
+      const allTickets = querySnapshot.docs.map(documentSnapshot => ({
+        id: documentSnapshot.id,
+        ...documentSnapshot.data(),
+      }));
+      setTickets(allTickets);
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
   }, []);
 
   const getStatusStyle = (status) => {
@@ -35,14 +40,14 @@ const ViewStatusScreen = ({ navigation }) => {
       default:
         return styles.defaultStatus;
     }
-  };    
+  };
 
+  const renderTickets = tickets.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   return (
     <View style={styles.container}>
-      
       <FlatList
-        data={tickets}
+        data={renderTickets}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -51,11 +56,24 @@ const ViewStatusScreen = ({ navigation }) => {
           >
             <Text style={styles.categoryText}>Category: {item.category}</Text>
             <Text style={styles.baseText}>Full Name: {item.fullName}</Text>
-            <Text style={[styles.baseText,getStatusStyle(item.status)]}>Status: {item.status}</Text>
+            <Text style={[styles.baseText, getStatusStyle(item.status)]}>Status: {item.status}</Text>
             <Text style={styles.baseText}>Phone No: {item.phoneNo}</Text>
+            <Text style={styles.baseText}>Updated On: {new Date(item.updated_on.toDate()).toLocaleString()}</Text>
           </TouchableOpacity>
         )}
       />
+      <View style={styles.paginationButtons}>
+        <Button
+          title="Previous"
+          onPress={() => setCurrentPage(prev => Math.max(prev - 1, 0))}
+          disabled={currentPage === 0}
+        />
+        <Button
+          title="Next"
+          onPress={() => setCurrentPage(prev => (prev + 1) * pageSize < tickets.length ? prev + 1 : prev)}
+          disabled={(currentPage + 1) * pageSize >= tickets.length}
+        />
+      </View>
     </View>
   );
 };
@@ -76,13 +94,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 1, height: 1 },
   },
   openStatus: {
-  color: '#FFD700' // A yellow color for open or pending status
+    color: '#FFD700' // A yellow color for open or pending status
   },
   completedStatus: {
     color: '#32CD32' // Green color for completed status
   },
   defaultStatus: {
-    color: 'white' // Default white background
+    color: 'blue' // Default color background
   },
   categoryText: {
     fontSize: 16,
@@ -93,7 +111,13 @@ const styles = StyleSheet.create({
   baseText: {
     fontSize: 14,
     color: '#555'
+  },
+  paginationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    margin: 10,
   }
 });
 
 export default ViewStatusScreen;
+
