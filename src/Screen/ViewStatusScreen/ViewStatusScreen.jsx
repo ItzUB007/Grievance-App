@@ -41,7 +41,7 @@ const ViewStatusScreen = ({ navigation }) => {
         return styles.defaultStatus;
     }
   };
-
+// Using Simple Pagination Logic
   const renderTickets = tickets.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   return (
