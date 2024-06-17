@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet,
-   Linking, TouchableOpacity
+   Linking, TouchableOpacity,Alert
      } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+
 
 
 
@@ -56,21 +57,35 @@ const TicketDetails = ({ route }) => {
   }, [ticketId]);
 
   const downloadAttachment = async (url, fileName) => {
-    let dirs = RNFetchBlob.fs.dirs;
-    let path = `${dirs.DownloadDir}/${fileName}`;
-
-    RNFetchBlob.config({
-      path: path,
-      fileCache: true
-    })
-    .fetch('GET', url)
-    .then((res) => {
-      alert('File downloaded to ' + res.path());
-    })
-    .catch((errorMessage, statusCode) => {
-      alert('Error downloading file: ' + errorMessage);
-    });
-  };   
+    try {
+      const dirs = ReactNativeBlobUtil.fs.dirs;
+      const downloadDest = Platform.OS === 'ios' ? `${dirs.DocumentDir}/${fileName}` : `${dirs.DownloadDir}/${fileName}`;
+  
+      ReactNativeBlobUtil.config({
+        path: downloadDest,
+        fileCache: true,
+        addAndroidDownloads: {
+          useDownloadManager: true,
+          notification: true,
+          path: downloadDest,
+          description: 'Downloading file.',
+        }
+      })
+      .fetch('GET', url)
+      .then(res => {
+        if (res) {
+          Alert.alert('Success', `File downloaded to ${res.path()}`);
+        } else {
+          Alert.alert('Error', `Failed to download file. Status code: ${res.info().status}`);
+        }
+      })
+      .catch(err => {
+        Alert.alert('Error', `Failed to download file: ${err.message}`);
+      });
+    } catch (error) {
+      Alert.alert('Error', `An error occurred while downloading the file: ${error.message}`);
+    }
+  };
 
  
 

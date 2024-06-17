@@ -13,6 +13,7 @@ import {
   TouchableWithoutFeedback,
   Platform,
   
+  
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
@@ -21,7 +22,8 @@ import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import storage from '@react-native-firebase/storage';
 import DocumentPicker from 'react-native-document-picker';
-import RNFetchBlob from 'rn-fetch-blob';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import RNFS from 'react-native-fs';
 
 const PostScreen = () => {
   const [categories, setCategories] = useState([]);
@@ -71,9 +73,15 @@ const PostScreen = () => {
         allowMultiSelection: true,
       });
   
-      res.forEach(doc => {
-        console.log(`Picked document URI: ${doc.uri}, type: ${doc.type}`);
-      });
+      for (let doc of res) {
+        const filePath = await getRealPathFromURI(doc.uri);
+        const fileStats = await RNFS.stat(filePath);
+  
+        if (fileStats.size > 200 * 1024) {
+          Alert.alert('File Too Large', `The file ${doc.name} is larger than 200KB.`);
+          return;
+        }
+      }
   
       // Add docName to the picked document
       res[0].docName = docName;
@@ -107,10 +115,12 @@ const PostScreen = () => {
   const getRealPathFromURI = async (uri) => {
     try {
       if (Platform.OS === 'android' && uri.startsWith('content://')) {
-        const base64Data = await RNFetchBlob.fs.readFile(uri, 'base64');
-        console.log(`Base64 data: ${base64Data}`);
-        return base64Data;
-      }
+        const base64Data = await ReactNativeBlobUtil.fs.readFile(uri, 'base64');
+        const path = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/${Date.now()}`;
+        await ReactNativeBlobUtil.fs.writeFile(path, base64Data, 'base64');
+        return path;
+        }
+  
       return uri;
     } catch (error) {
       console.error(`Error getting real path: ${error}`);
@@ -122,11 +132,11 @@ const PostScreen = () => {
     if (!selectedCategory || !subject || !description || !fullName || !phoneNo || !gender) {
       Alert.alert('All fields are required!');
       return;
-     } 
-      if (documentRequired.length !== documents.length) {
-        Alert.alert('All Documents are required!');
-        return;
-      }
+    }
+    if (documentRequired.length !== documents.length) {
+      Alert.alert('All Documents are required!');
+      return;
+    }
   
     setLoading(true);
   
@@ -166,18 +176,19 @@ const PostScreen = () => {
           continue;
         }
   
-        const base64Data = await getRealPathFromURI(doc.uri);
-        if (!base64Data) {
+        const filePath = await getRealPathFromURI(doc.uri);
+        if (!filePath) {
           console.error('Failed to get real path for URI:', doc.uri);
           continue;
         }
   
+        const fileData = await RNFS.readFile(filePath, 'base64');
         const fileRef = storage().ref(`documents/${ticketRef.id}/${Date.now()}_${doc.docName}`);
-        await fileRef.putString(base64Data, 'base64', { contentType: doc.type });
-        const filePath = await fileRef.getDownloadURL();
+        await fileRef.putString(fileData, 'base64', { contentType: doc.type });
+        const filePathUrl = await fileRef.getDownloadURL();
         await firestore().collection('Tickets').doc(ticketRef.id).collection('Attachments').add({
           file_name: doc.docName,
-          file_path: filePath,
+          file_path: filePathUrl,
         });
       }
   
@@ -198,7 +209,6 @@ const PostScreen = () => {
       Alert.alert('Error submitting ticket. Please try again.');
     }
   };
-  
   
 
 
@@ -356,10 +366,7 @@ const PostScreen = () => {
           <Picker.Item label="Low" value="Low" />
         </Picker>
 
-        {/* <Text style={styles.label}>Upload Documents</Text>
-        <TouchableOpacity style={styles.uploadButton} onPress={pickDocuments}>
-          <Text style={styles.uploadButtonText}>Upload Documents</Text>
-        </TouchableOpacity> */}
+      
         {applicationMethod && (
           <>
             <Text style={styles.label}>Application Method</Text>
