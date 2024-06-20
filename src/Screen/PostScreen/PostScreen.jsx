@@ -25,7 +25,8 @@ import DocumentPicker from 'react-native-document-picker';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNFS from 'react-native-fs';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import {API_KEY } from "@env"
+import services from '../../utils/services';
+
 
 const PostScreen = () => {
   const [categories, setCategories] = useState([]);
@@ -46,7 +47,7 @@ const PostScreen = () => {
   const [documentRequired, setDocumentRequired] = useState([]);
   const [documents, setDocuments] = useState([]);
   // const [suggestedCategory, setSuggesttedCategory]= useState('')
-  // const API_KEY ='AIzaSyA6MPvHiPGN-VmrM2YQNnlrus0sCeNEBoc';
+   const API_KEY = services.API_KEY;
   // Access your API key (see "Set up your API key" above)
     const genAI = new GoogleGenerativeAI(API_KEY);
 // Function to call Gemini and get the suggested category
@@ -81,9 +82,8 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
       setFilteredCategories(categoryData);
          
     };
-    // console.log(API_KEY);
     fetchCategories()
-   console.log(API_KEY);
+    console.log(API_KEY);
   }, []);
 
 
