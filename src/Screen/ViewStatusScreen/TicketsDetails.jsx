@@ -94,13 +94,15 @@ const TicketDetails = ({ route }) => {
     <ScrollView style={styles.container}>
       {ticketDetails && (
         <View style={styles.detailsContainer}>
-          <Text style={styles.detailText}>Category: {ticketDetails.category}</Text>
+          <Text style={styles.detailText}>Category Applied: {ticketDetails.category}</Text>
+          <Text style={styles.detailText}>Suggested Category: {ticketDetails.suggestedCategory}</Text>
           <Text style={styles.detailText}>Full Name: {ticketDetails.fullName}</Text>
           <Text style={styles.detailText}>Status: {ticketDetails.status}</Text>
           <Text style={styles.detailText}>Phone No: {ticketDetails.phoneNo}</Text>
           <Text style={styles.detailText}>Created On: {ticketDetails.created_on}</Text> 
           <Text style={styles.detailText}>Updated On: {ticketDetails.updated_on}</Text>
-          <Text style={styles.detailText}>Description: {ticketDetails.subject}</Text>
+          <Text style={styles.detailText}>Description: {ticketDetails.description}</Text>
+          
         </View>
       )}
       <Text style={styles.attachmentHeader}>Attachments:</Text>

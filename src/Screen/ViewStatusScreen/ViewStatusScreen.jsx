@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Button } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Button, TextInput } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 
 const ViewStatusScreen = ({ navigation }) => {
   const [tickets, setTickets] = useState([]);
+  const [filteredTickets, setFilteredTickets] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const user = auth().currentUser;
   const currentUserID = user.uid;
   const pageSize = 10;
 
   const fetchTickets = async () => {
-    //Added orderBy on the latest status on updated_on 
     let query = firestore()
       .collection('Tickets')
       .where('user_id', '==', currentUserID)
@@ -24,12 +25,29 @@ const ViewStatusScreen = ({ navigation }) => {
         ...documentSnapshot.data(),
       }));
       setTickets(allTickets);
+      setFilteredTickets(allTickets);
     }
   };
 
   useEffect(() => {
     fetchTickets();
   }, []);
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    if (query.trim() === '') {
+      setFilteredTickets(tickets);
+    } else {
+      const filtered = tickets.filter(ticket => 
+        ticket.fullName.toLowerCase().includes(query.toLowerCase()) ||
+        ticket.category.toLowerCase().includes(query.toLowerCase()) ||
+        ticket.phoneNo.toLowerCase().includes(query.toLowerCase()) ||
+        ticket.status.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredTickets(filtered);
+      setCurrentPage(0); // Reset to the first page on new search
+    }
+  };
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -42,11 +60,18 @@ const ViewStatusScreen = ({ navigation }) => {
         return styles.defaultStatus;
     }
   };
-// Using Simple Pagination Logic 
-  const renderTickets = tickets.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+
+  const renderTickets = filteredTickets.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   return (
     <View style={styles.container}>
+      <TextInput
+        style={styles.searchBar}
+        placeholder="Search Tickets"
+        value={searchQuery}
+        onChangeText={handleSearch}
+        placeholderTextColor={'black'}
+      />
       <FlatList
         data={renderTickets}
         keyExtractor={item => item.id}
@@ -56,6 +81,7 @@ const ViewStatusScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('TicketDetails', { ticketId: item.id })}
           >
             <Text style={styles.categoryText}>Category: {item.category}</Text>
+     
             <Text style={styles.baseText}>Full Name: {item.fullName}</Text>
             <Text style={[styles.baseText, getStatusStyle(item.status)]}>Status: {item.status}</Text>
             <Text style={styles.baseText}>Phone No: {item.phoneNo}</Text>
@@ -71,8 +97,8 @@ const ViewStatusScreen = ({ navigation }) => {
         />
         <Button
           title="Next"
-          onPress={() => setCurrentPage(prev => (prev + 1) * pageSize < tickets.length ? prev + 1 : prev)}
-          disabled={(currentPage + 1) * pageSize >= tickets.length}
+          onPress={() => setCurrentPage(prev => (prev + 1) * pageSize < filteredTickets.length ? prev + 1 : prev)}
+          disabled={(currentPage + 1) * pageSize >= filteredTickets.length}
         />
       </View>
     </View>
@@ -83,6 +109,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F0F0'
+  },
+  searchBar: {
+    padding: 10,
+    margin: 10,
+    borderColor: '#CCC',
+    borderWidth: 1,
+    borderRadius: 5,
+    backgroundColor: '#FFF',
+    color:'#6200ee'
   },
   ticketItem: {
     padding: 20,
@@ -121,4 +156,3 @@ const styles = StyleSheet.create({
 });
 
 export default ViewStatusScreen;
-

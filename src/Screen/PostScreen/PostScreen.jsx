@@ -24,6 +24,7 @@ import storage from '@react-native-firebase/storage';
 import DocumentPicker from 'react-native-document-picker';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNFS from 'react-native-fs';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const PostScreen = () => {
   const [categories, setCategories] = useState([]);
@@ -43,6 +44,24 @@ const PostScreen = () => {
   const [applicationMethod, setApplicationMethod] = useState('');
   const [documentRequired, setDocumentRequired] = useState([]);
   const [documents, setDocuments] = useState([]);
+  // const [suggestedCategory, setSuggesttedCategory]= useState('')
+  const API_KEY ='AIzaSyA6MPvHiPGN-VmrM2YQNnlrus0sCeNEBoc';
+  // Access your API key (see "Set up your API key" above)
+    const genAI = new GoogleGenerativeAI(API_KEY);
+// Function to call Gemini and get the suggested category
+const GeminiCategory = async (description, subject, selectedCategory, categories) => {
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const categoryNames = categories.map(category => category.categoryName);
+  const prompt = `Given a description & subject of a customer support ticket and a list of possible categories, suggest a new category if the user-selected category seems inaccurate. Otherwise, confirm the user-selected category. Description: ${description} Subject: ${subject} Possible categories: ${categoryNames.join(', ')} User-selected category: ${selectedCategory} Only tell categoryName and if User-Selected Category is Other. then create a new categoryName on the basis of Subject & Description only tell categoryName`;
+
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const text = await response.text();
+
+  console.log('Gemini Response:', text);
+  return text;
+}
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -53,11 +72,11 @@ const PostScreen = () => {
       }));
       setCategories(categoryData);
       setFilteredCategories(categoryData);
-   
+         
     };
 
-    fetchCategories();
-    
+    fetchCategories()
+   
   }, []);
 
 
@@ -85,6 +104,7 @@ const PostScreen = () => {
   
       // Add docName to the picked document
       res[0].docName = docName;
+    
   
       // Check if the document name already exists and replace it
       const updatedDocuments = documents.map(doc =>
@@ -132,13 +152,18 @@ const PostScreen = () => {
     if (!selectedCategory || !subject || !description || !fullName || !phoneNo || !gender) {
       Alert.alert('All fields are required!');
       return;
-    }
-    if (documentRequired.length !== documents.length) {
+    }   
+    
+    if (documentRequired && documentRequired.length !== documents.length) {
       Alert.alert('All Documents are required!');
       return;
-    }
-  
+    }  
     setLoading(true);
+    
+    // Call Gemini and get the suggested category
+    const suggestedCategory = await GeminiCategory(description, subject, selectedCategory, categories);
+  
+    // console.log(suggestedCategory);
   
     try {
       const user = auth().currentUser;
@@ -149,6 +174,7 @@ const PostScreen = () => {
       const ticketData = {
         assigned_to: '',
         category: selectedCategory,
+        suggestedCategory:suggestedCategory,
         created_on: createdOn,
         description: description,
         priority: priority,
@@ -164,11 +190,12 @@ const PostScreen = () => {
         dob: dob.toDateString(),
         category_id: categories.find(category => category.categoryName === selectedCategory)?.id || '',
         applicationMethod: applicationMethod,
-        documentRequired: documentRequired,
+        // documentRequired: documentRequired,
       };
   
       const ticketRef = await firestore().collection('Tickets').add(ticketData);
-  
+
+     if (documents) {
       for (const doc of documents) {
         console.log('Processing document:', doc);
         if (!doc.uri) {
@@ -192,6 +219,9 @@ const PostScreen = () => {
         });
       }
   
+
+     }
+  
       setLoading(false);
       Alert.alert('Ticket submitted successfully!');
       setSelectedCategory('');
@@ -209,10 +239,6 @@ const PostScreen = () => {
       Alert.alert('Error submitting ticket. Please try again.');
     }
   };
-  
-
-
-
 
   const showDatepicker = () => {
     setShowDatePicker(true);
