@@ -25,6 +25,7 @@ import DocumentPicker from 'react-native-document-picker';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNFS from 'react-native-fs';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import {API_KEY } from "@env"
 
 const PostScreen = () => {
   const [categories, setCategories] = useState([]);
@@ -45,22 +46,28 @@ const PostScreen = () => {
   const [documentRequired, setDocumentRequired] = useState([]);
   const [documents, setDocuments] = useState([]);
   // const [suggestedCategory, setSuggesttedCategory]= useState('')
-  const API_KEY ='AIzaSyA6MPvHiPGN-VmrM2YQNnlrus0sCeNEBoc';
+  // const API_KEY ='AIzaSyA6MPvHiPGN-VmrM2YQNnlrus0sCeNEBoc';
   // Access your API key (see "Set up your API key" above)
     const genAI = new GoogleGenerativeAI(API_KEY);
 // Function to call Gemini and get the suggested category
 const GeminiCategory = async (description, subject, selectedCategory, categories) => {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  const categoryNames = categories.map(category => category.categoryName);
-  const prompt = `Given a description & subject of a customer support ticket and a list of possible categories, suggest a new category if the user-selected category seems inaccurate. Otherwise, confirm the user-selected category. Description: ${description} Subject: ${subject} Possible categories: ${categoryNames.join(', ')} User-selected category: ${selectedCategory} Only tell categoryName and if User-Selected Category is Other. then create a new categoryName on the basis of Subject & Description only tell categoryName`;
-
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  const text = await response.text();
-
-  console.log('Gemini Response:', text);
-  return text;
+    const categoryNames = categories.map(category => category.categoryName);
+    const prompt = `Given a description & subject of a customer support ticket and a list of possible categories, suggest a new category if the user-selected category seems inaccurate. Otherwise, confirm the user-selected category. Description: ${description} Subject: ${subject} Possible categories: ${categoryNames.join(', ')} User-selected category: ${selectedCategory} Only tell categoryName and if User-Selected Category is Other. then create a new categoryName on the basis of Subject & Description only tell categoryName dont provide header also like categoryName: '' just provide categoryName`;
+  
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = await response.text();
+  
+    console.log('Gemini Response:', text);
+    return text;
+    
+  } catch (error) {
+    console.log('Gemini is not Working'+ error);
+  }
+ 
 }
 
   useEffect(() => {
@@ -74,9 +81,9 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
       setFilteredCategories(categoryData);
          
     };
-
+    // console.log(API_KEY);
     fetchCategories()
-   
+   console.log(API_KEY);
   }, []);
 
 
