@@ -95,7 +95,7 @@ const TicketDetails = ({ route }) => {
       {ticketDetails && (
         <View style={styles.detailsContainer}>
           <Text style={styles.detailText}>Category Applied: {ticketDetails.category}</Text>
-          <Text style={styles.detailText}>Suggested Category: {ticketDetails.suggestedCategory}</Text>
+          {/* <Text style={styles.detailText}>Suggested Category: {ticketDetails.suggestedCategory}</Text> */}
           <Text style={styles.detailText}>Full Name: {ticketDetails.fullName}</Text>
           <Text style={styles.detailText}>Status: {ticketDetails.status}</Text>
           <Text style={styles.detailText}>Phone No: {ticketDetails.phoneNo}</Text>

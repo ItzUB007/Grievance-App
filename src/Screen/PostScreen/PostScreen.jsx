@@ -12,8 +12,6 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Platform,
-  
-  
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
@@ -26,6 +24,8 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNFS from 'react-native-fs';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import services from '../../utils/services';
+import { useSelector } from 'react-redux';
+
 
 
 const PostScreen = () => {
@@ -46,7 +46,8 @@ const PostScreen = () => {
   const [applicationMethod, setApplicationMethod] = useState('');
   const [documentRequired, setDocumentRequired] = useState([]);
   const [documents, setDocuments] = useState([]);
-  // const [suggestedCategory, setSuggesttedCategory]= useState('')
+  const isOn = useSelector((state) => state.slider.isOn);
+  
    const API_KEY = services.API_KEY;
   // Access your API key (see "Set up your API key" above)
     const genAI = new GoogleGenerativeAI(API_KEY);
@@ -56,7 +57,7 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const categoryNames = categories.map(category => category.categoryName);
-    const prompt = `Given a description & subject of a customer support ticket and a list of possible categories, suggest a new category if the user-selected category seems inaccurate. Otherwise, confirm the user-selected category. Description: ${description} Subject: ${subject} Possible categories: ${categoryNames.join(', ')} User-selected category: ${selectedCategory} Only tell categoryName and if User-Selected Category is Other. then create a new categoryName on the basis of Subject & Description only tell categoryName dont provide header also like categoryName: '' just provide categoryName`;
+    const prompt = `Given a description & subject of a customer support ticket and a list of possible categories, suggest a new category if the user-selected category seems inaccurate. Otherwise, confirm the user-selected category. Description: ${description} Subject: ${subject} Possible Categories: ${categoryNames.join(', ')} User-selected category: ${selectedCategory} Only tell categoryName and if User-Selected Category is Other and is not matching with Possible Categories then create a new categoryName on the basis of Subject & Description only tell categoryName dont provide header also like categoryName: '' just provide categoryName`;
   
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -83,14 +84,8 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
          
     };
     fetchCategories()
-    console.log(API_KEY);
+
   }, []);
-
-
-
-
-
-
 
   const pickDocuments = async (docName) => {
     try {
@@ -159,19 +154,51 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
     if (!selectedCategory || !subject || !description || !fullName || !phoneNo || !gender) {
       Alert.alert('All fields are required!');
       return;
-    }   
-    
+    }
+  
     if (documentRequired && documentRequired.length !== documents.length) {
       Alert.alert('All Documents are required!');
       return;
-    }  
+    }
+  
     setLoading(true);
+
     
-    // Call Gemini and get the suggested category
-    const suggestedCategory = await GeminiCategory(description, subject, selectedCategory, categories);
+    let suggestedCategory = selectedCategory;
+
+    if (isOn) {
+      suggestedCategory = await GeminiCategory(description, subject, selectedCategory, categories);
+
+      const normalizedSelectedCategory = selectedCategory.trim().toLowerCase();
+      const normalizedSuggestedCategory = suggestedCategory.trim().toLowerCase();
+
+      if (normalizedSuggestedCategory !== normalizedSelectedCategory) {
+        Alert.alert(
+          'Category Suggestion',
+          `The suggested category is ${suggestedCategory}. Do you want to use this instead of the selected category (${selectedCategory})?`,
+          [
+            {
+              text: 'No',
+              onPress: () => {
+                continueSubmission(selectedCategory);
+              },
+            },
+            {
+              text: 'Yes',
+              onPress: () => {
+                continueSubmission(suggestedCategory);
+              },
+            },
+          ]
+        );
+        return;
+      }
+    }
+
+    continueSubmission(selectedCategory);
+  };
   
-    // console.log(suggestedCategory);
-  
+  const continueSubmission = async (category) => {
     try {
       const user = auth().currentUser;
       const userEmail = user.email;
@@ -180,8 +207,9 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
   
       const ticketData = {
         assigned_to: '',
-        category: selectedCategory,
-        suggestedCategory:suggestedCategory,
+        category: category,
+        selectedCategory: selectedCategory,
+        suggestedCategory: category === selectedCategory ? null : category,
         created_on: createdOn,
         description: description,
         priority: priority,
@@ -195,57 +223,62 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
         phoneNo: phoneNo,
         gender: gender,
         dob: dob.toDateString(),
-        category_id: categories.find(category => category.categoryName === selectedCategory)?.id || '',
+        category_id: categories.find(cat => cat.categoryName === category)?.id || '',
         applicationMethod: applicationMethod,
         // documentRequired: documentRequired,
       };
   
       const ticketRef = await firestore().collection('Tickets').add(ticketData);
-
-     if (documents) {
-      for (const doc of documents) {
-        console.log('Processing document:', doc);
-        if (!doc.uri) {
-          console.error('Document URI is undefined:', doc);
-          continue;
+  
+      if (documents) {
+        for (const doc of documents) {
+          console.log('Processing document:', doc);
+          if (!doc.uri) {
+            console.error('Document URI is undefined:', doc);
+            continue;
+          }
+      
+          const filePath = await getRealPathFromURI(doc.uri);
+          if (!filePath) {
+            console.error('Failed to get real path for URI:', doc.uri);
+            continue;
+          }
+      
+          const fileData = await RNFS.readFile(filePath, 'base64');
+          const fileRef = storage().ref(`documents/${ticketRef.id}/${Date.now()}_${doc.docName}`);
+          await fileRef.putString(fileData, 'base64', { contentType: doc.type });
+          const filePathUrl = await fileRef.getDownloadURL();
+          await firestore().collection('Tickets').doc(ticketRef.id).collection('Attachments').add({
+            file_name: doc.docName,
+            file_path: filePathUrl,
+          });
         }
-  
-        const filePath = await getRealPathFromURI(doc.uri);
-        if (!filePath) {
-          console.error('Failed to get real path for URI:', doc.uri);
-          continue;
-        }
-  
-        const fileData = await RNFS.readFile(filePath, 'base64');
-        const fileRef = storage().ref(`documents/${ticketRef.id}/${Date.now()}_${doc.docName}`);
-        await fileRef.putString(fileData, 'base64', { contentType: doc.type });
-        const filePathUrl = await fileRef.getDownloadURL();
-        await firestore().collection('Tickets').doc(ticketRef.id).collection('Attachments').add({
-          file_name: doc.docName,
-          file_path: filePathUrl,
-        });
-      }
-  
-
-     }
+      
+      
+       }
   
       setLoading(false);
       Alert.alert('Ticket submitted successfully!');
-      setSelectedCategory('');
-      setSubject('');
-      setDescription('');
-      setGender('Male');
-      setDob(new Date());
-      setPriority('High');
-      setDocuments([]);
-      setFullName('');
-      setPhoneNo('');
+      resetForm();
     } catch (error) {
       setLoading(false);
       console.error('Error submitting ticket: ', error);
       Alert.alert('Error submitting ticket. Please try again.');
     }
   };
+  
+  const resetForm = () => {
+    setSelectedCategory('');
+    setSubject('');
+    setDescription('');
+    setGender('Male');
+    setDob(new Date());
+    setPriority('High');
+    setDocuments([]);
+    setFullName('');
+    setPhoneNo('');
+  };
+  
 
   const showDatepicker = () => {
     setShowDatePicker(true);

@@ -1,33 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import  ManageExternalStorage  from 'react-native-manage-external-storage';
+import { useSelector, useDispatch } from 'react-redux';
+import ManageExternalStorage from 'react-native-manage-external-storage';
+
+import { toggleSlider } from '../../../redux/features/sliderSlice';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
- 
-
-
+  const dispatch = useDispatch();
+  const isOn = useSelector((state) => state.slider.isOn);
 
   const [result, setResult] = useState(false);
+
   useEffect(() => {
-     async function AskPermission() {
-     await ManageExternalStorage.checkAndGrantPermission(
-            err => { 
-              setResult(false)
-           },
-           res => {
-            setResult(true)
-           },
-         )
+    async function AskPermission() {
+      await ManageExternalStorage.checkAndGrantPermission(
+        err => {
+          setResult(false);
+        },
+        res => {
+          setResult(true);
+        },
+      );
     }
-  
-      // AskPermission()  // This function is only executed once if the user allows the permission and this package retains that permission 
-   }, []);
+
+    // AskPermission()  // This function is only executed once if the user allows the permission and this package retains that permission 
+  }, []);
+
+  // useEffect(() => {
+  //   console.log('AI Suggestions State:', isOn ? 'On' : 'Off');
+  // }, [isOn]);
 
   return (
     <View style={styles.container}>
-
       <Text style={styles.title}>Welcome To Adhikar Grievance</Text>
       <TouchableOpacity style={styles.option} onPress={() => navigation.navigate('Post')}>
         <Image source={require('../../Assets/post.png')} style={styles.image} />
@@ -39,6 +45,14 @@ const HomeScreen = () => {
         <Image source={require('../../Assets/view.png')} style={styles.image} />
         <Text style={styles.optionText}>VIEW STATUS</Text>
       </TouchableOpacity>
+      {/* Slider for AI Suggestions */}
+      <View style={styles.sliderContainer}>
+        <Text style={styles.sliderText}>AI Assist: {isOn ? 'On' : 'Off'}</Text>
+        <Switch
+          value={isOn}
+          onValueChange={() => dispatch(toggleSlider())}
+        />
+      </View>
     </View>
   );
 };
@@ -46,20 +60,20 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'column', // Change this to 'column' if you want them to stack vertically on smaller screens
+    flexDirection: 'column',
     justifyContent: 'space-evenly',
     alignItems: 'center',
     backgroundColor: '#fff',
+    position: 'relative',
   },
   option: {
     alignItems: 'center',
-    // marginVertical: 20, // Add some margin between the buttons and the separator
   },
   image: {
     width: 200,
     height: 200,
     marginBottom: 10,
-    objectFit:'contain'
+    objectFit: 'contain',
   },
   optionText: {
     fontSize: 16,
@@ -67,15 +81,27 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   separator: {
-    width: '90%', // Adjust the width as needed
+    width: '90%',
     height: 1,
     backgroundColor: '#ccc',
-    // marginVertical: 20, // Add some vertical margin to space the separator from the buttons
-  },  title: {
+  },
+  title: {
     fontSize: 20,
     color: '#6200ee',
     fontWeight: '600',
-    marginBottom: 10,
+    marginTop: 10,
+  },
+  sliderContainer: {
+    position: 'absolute',
+    top: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    
+  },
+  sliderText: {
+    marginRight: 10,
+    fontSize: 16,
+    color: '#333',
   },
 });
 
