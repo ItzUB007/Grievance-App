@@ -25,7 +25,7 @@ import RNFS from 'react-native-fs';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import services from '../../utils/services';
 import { useSelector } from 'react-redux';
-
+import { launchCamera } from 'react-native-image-picker';
 
 
 const PostScreen = () => {
@@ -57,12 +57,10 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const categoryNames = categories.map(category => category.categoryName);
-    const prompt = `Given a description & subject of a customer support ticket and a list of possible categories, suggest a new category if the user-selected category seems inaccurate. Otherwise, confirm the user-selected category. Description: ${description} Subject: ${subject} Possible Categories: ${categoryNames.join(', ')} User-selected category: ${selectedCategory} Only tell categoryName and if User-Selected Category is Other and is not matching with Possible Categories then create a new categoryName on the basis of Subject & Description only tell categoryName dont provide header also like categoryName: '' just provide categoryName`;
-  
+    const prompt = `Given a description & subject of a customer support ticket and a list of possible categories, suggest a new category if the user-selected category seems inaccurate. Otherwise, confirm the user-selected category. Description: ${description} Subject: ${subject} Possible Categories: ${categoryNames.join(', ')} User-selected category: ${selectedCategory} Only tell categoryName and if User-Selected Category is Other and is not matching with Possible Categories then create a new categoryName on the basis of Subject & Description only tell categoryName dont provide header also like categoryName: '' just provide categoryName without any additional explanation`;
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = await response.text();
-  
     console.log('Gemini Response:', text);
     return text;
     
@@ -71,6 +69,7 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
   }
  
 }
+
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -131,6 +130,51 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
         Alert.alert('Document Picker Error', 'An error occurred while picking documents.');
         throw err;
       }
+    }
+  };
+
+  const takePhoto = async (docName) => {
+    try {
+      const res = await launchCamera({
+        mediaType: 'photo',
+        includeBase64: true,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      });
+      res.docName = docName;
+      if (res.didCancel) {
+        console.log('User cancelled camera');
+      } else if (res.errorCode) {
+        console.error('Camera Error:', res.errorMessage);
+        Alert.alert('Camera Error', 'An error occurred while taking a photo.');
+      } else {
+        const fileStats = { size: res.assets[0].fileSize };
+  
+        if (fileStats.size > 1024 * 1024) {
+          Alert.alert('File Too Large', `The file is larger than 1MB.`);
+          return;
+        }
+            // Add docName to the picked document
+      
+        const photo = { uri: res.assets[0].uri, type: res.assets[0].type, name: res.assets[0].fileName, docName };
+  
+        const updatedDocuments = documents.map(doc =>
+          doc.docName === docName ? photo : doc
+        );
+  
+        const isNewDoc = !documents.some(doc => doc.docName === docName);
+        if (isNewDoc) {
+          updatedDocuments.push(photo);
+        }
+  
+        setDocuments(updatedDocuments);
+  
+        console.log('Updated documents:', updatedDocuments);
+      }
+    } catch (err) {
+      console.error('Camera Error:', err);
+      Alert.alert('Camera Error', 'An error occurred while taking a photo.');
+      throw err;
     }
   };
   
@@ -439,14 +483,21 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
             <Text style={styles.userInfo}>{applicationMethod}</Text>
           </>
         )}
-
-        {documentRequired && (
+    {documentRequired && (
           <>
             <Text style={styles.label}>Documents Required - Upload Documents</Text>
             {documentRequired.map((doc, index) => (
-              <TouchableOpacity key={index} style={styles.uploadButton} onPress={() => pickDocuments(doc)}>
-                <Text style={styles.uploadButtonText} >{doc}</Text>
-              </TouchableOpacity>
+              <View key={index} style={styles.uploadOptionsContainer}>
+                <Text style={styles.uploadOptionsLabel}>{doc}</Text>
+                <View style={styles.uploadButtons}>
+                  <TouchableOpacity style={styles.uploadButton} onPress={() => pickDocuments(doc)}>
+                    <Text style={styles.uploadButtonText}>Pick Document</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.uploadButton} onPress={() => takePhoto(doc)}>
+                    <Text style={styles.uploadButtonText}>Take Photo</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             ))}
           </>
         )}
@@ -539,6 +590,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  uploadButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   dateButton: {
     backgroundColor: '#6200ee',
     padding: 12,
@@ -619,6 +674,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     fontWeight: '600',
+  },
+  uploadOptionsLabel: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 8,
+    textAlign:'center'
   },
 });
 
