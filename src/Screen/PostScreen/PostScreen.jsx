@@ -57,7 +57,14 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const categoryNames = categories.map(category => category.categoryName);
-    const prompt = `Given a description & subject of a customer support ticket and a list of possible categories, suggest a new category if the user-selected category seems inaccurate. Otherwise, confirm the user-selected category. Description: ${description} Subject: ${subject} Possible Categories: ${categoryNames.join(', ')} User-selected category: ${selectedCategory} Only tell categoryName and if User-Selected Category is Other and is not matching with Possible Categories then create a new categoryName on the basis of Subject & Description only tell categoryName dont provide header also like categoryName: '' just provide categoryName without any additional explanation`;
+    const prompt = `Given a description & subject of a customer support ticket and a list of possible
+     categories, suggest a new category if the user-selected category seems inaccurate. Otherwise, 
+     confirm the user-selected category. Description: ${description} Subject: ${subject}
+      Possible Categories: ${categoryNames.join(', ')} User-selected category: ${selectedCategory} 
+      Only tell categoryName and if User-Selected Category is Other and is not matching
+       with Possible Categories then create a new categoryName on the basis of Subject 
+       & Description only tell categoryName dont provide header also like categoryName: '' 
+       just provide categoryName without any additional explanation`;
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = await response.text();
