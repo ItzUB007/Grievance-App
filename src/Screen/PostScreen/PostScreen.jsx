@@ -280,6 +280,27 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
       };
   
       const ticketRef = await firestore().collection('Tickets').add(ticketData);
+     
+      // Check if a member with the same name and phone number exists
+      const membersRef = await firestore().collection('Members');
+      const memberQuery = membersRef.where('name', '==', fullName).where('phoneNumber', '==', phoneNo);
+      const memberSnapshot = await memberQuery.get();
+
+      if (!memberSnapshot.empty) {
+          // Member exists, add the TicketId to the existing member's TicketId array
+          const memberDoc = memberSnapshot.docs[0];
+          await memberDoc.ref.update({
+              TicketId: firestore.FieldValue.arrayUnion(ticketRef.id)
+          });
+      } else {
+          // Member does not exist, create a new member document
+          await membersRef.add({
+              name: fullName,
+              phoneNumber: phoneNo,
+              TicketId: [ticketRef.id]
+          });
+      }
+
   
       if (documents) {
         for (const doc of documents) {
