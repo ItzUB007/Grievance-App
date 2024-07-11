@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Button, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Button, TextInput, ActivityIndicator, Image } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const ViewStatusScreen = ({ navigation }) => {
   const [tickets, setTickets] = useState([]);
@@ -9,6 +10,7 @@ const ViewStatusScreen = ({ navigation }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [lastDoc, setLastDoc] = useState(null);
   const [firstDoc, setFirstDoc] = useState(null);
   const [firstDocArr, setFirstDocArr] = useState([]);
@@ -59,21 +61,46 @@ const ViewStatusScreen = ({ navigation }) => {
     fetchTickets();
   }, [currentUserID]);
 
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-    if (query.trim() === '') {
+  const handleSearch = async () => {
+    if (searchQuery.trim() === '') {
       setFilteredTickets(tickets);
-      
+      setSearching(false);
     } else {
-      const filtered = tickets.filter(ticket => 
-        ticket.fullName.toLowerCase().includes(query.toLowerCase()) ||
-        ticket.category.toLowerCase().includes(query.toLowerCase()) ||
-        ticket.phoneNo.toLowerCase().includes(query.toLowerCase()) ||
-        ticket.status.toLowerCase().includes(query.toLowerCase())
-      );
-      setFilteredTickets(filtered);
-      setCurrentPage(0); // Reset to the first page on new search
+      setLoading(true);
+      const querySnapshot = await firestore()
+        .collection('Tickets')
+        .where('user_id', '==', currentUserID)
+        .orderBy('updated_on', 'desc')
+        .get();
+
+      if (!querySnapshot.empty) {
+        const allTickets = querySnapshot.docs.map(documentSnapshot => ({
+          id: documentSnapshot.id,
+          ...documentSnapshot.data(),
+        }));
+
+        const filtered = allTickets.filter(ticket => 
+          ticket.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          ticket.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          ticket.phoneNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          ticket.status.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+        setTickets(allTickets);
+        setFilteredTickets(filtered);
+        setCurrentPage(0); // Reset to the first page on new search
+        setSearching(true);
+      }
+      setLoading(false);
     }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setFilteredTickets(tickets);
+    setCurrentPage(0);
+    setSearching(false);
+    fetchTickets();
   };
 
   const getStatusStyle = (status) => {
@@ -92,13 +119,13 @@ const ViewStatusScreen = ({ navigation }) => {
   };
 
   const handleNextPage = () => {
-    if (lastDoc) {
+    if (lastDoc && !searching) {
       fetchTickets('next', lastDoc);
     }
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 0 && firstDocArr[currentPage - 1]) {
+    if (currentPage > 0 && firstDocArr[currentPage - 1] && !searching) {
       fetchTickets('prev', firstDocArr.pop());
     }
   };
@@ -126,13 +153,24 @@ const ViewStatusScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <TextInput
-        style={styles.searchBar}
-        placeholder="Search Tickets"
-        value={searchQuery}
-        onChangeText={handleSearch}
-        placeholderTextColor={'black'}
-      />
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchBar}
+          placeholder="Search Tickets"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholderTextColor={'black'}
+        />
+        {searchQuery ? (
+          <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+            <Icon name="close-circle" size={24} color="#6200ee" />
+          </TouchableOpacity>
+        ) : null}
+        <Button
+          title="Search"
+          onPress={handleSearch}
+        />
+      </View>
       <FlatList
         data={filteredTickets}
         keyExtractor={item => item.id}
@@ -142,12 +180,12 @@ const ViewStatusScreen = ({ navigation }) => {
         <Button
           title="Previous"
           onPress={handlePrevPage}
-          disabled={currentPage === 0}
+          disabled={currentPage === 0 || searching}
         />
         <Button
           title="Next"
           onPress={handleNextPage}
-          disabled={filteredTickets.length < pageSize}
+          disabled={filteredTickets.length < pageSize || searching}
         />
       </View>
     </View>
@@ -160,14 +198,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F0F0',
     padding: 10,
   },
-  searchBar: {
+  searchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 10,
-    margin: 10,
+  },
+  searchBar: {
+    flex: 1,
+    padding: 10,
+    marginRight: 10,
     borderColor: '#CCC',
     borderWidth: 1,
     borderRadius: 5,
     backgroundColor: '#FFF',
     color: '#6200ee',
+  },
+  clearButton: {
+    position: 'absolute',
+    right: 80,
+    padding: 10,
   },
   ticketItem: {
     padding: 20,
