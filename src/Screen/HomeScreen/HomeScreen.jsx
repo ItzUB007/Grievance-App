@@ -34,16 +34,16 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome To Adhikar Grievance</Text>
-      <TouchableOpacity style={styles.option} onPress={() => navigation.navigate('Post')}>
-        <Image source={require('../../Assets/post.png')} style={styles.image} />
-        <Text style={styles.optionText}>Raise a Ticket</Text>
+      <Text style={styles.title}>Welcome To Adhikar </Text>
+      <TouchableOpacity style={styles.option} onPress={() => navigation.navigate('Grievance')}>
+        <Image source={require('../../Assets/grievance.png')} style={styles.image} />
+        <Text style={styles.optionText}>Grievance</Text>
       </TouchableOpacity>
       {/* Add a border line here between these two buttons */}
       <View style={styles.separator} />
-      <TouchableOpacity style={styles.option} onPress={() => navigation.navigate('ViewStatus')}>
+      <TouchableOpacity style={styles.option} onPress={() => navigation.navigate('Adhikar')}>
         <Image source={require('../../Assets/view.png')} style={styles.image} />
-        <Text style={styles.optionText}>VIEW STATUS</Text>
+        <Text style={styles.optionText}>Adhikar</Text>
       </TouchableOpacity>
       {/* Slider for AI Suggestions */}
       <View style={styles.sliderContainer}>
