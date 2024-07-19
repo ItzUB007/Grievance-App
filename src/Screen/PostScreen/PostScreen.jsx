@@ -14,7 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -26,9 +26,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import services from '../../utils/services';
 import { useSelector } from 'react-redux';
 import { launchCamera } from 'react-native-image-picker';
+import { useAuth } from '../../contexts/AuthContext';
 
 
 const PostScreen = () => {
+  const { currentUser, permissions,userData } = useAuth();
   const [categories, setCategories] = useState([]);
   const [filteredCategories, setFilteredCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -47,6 +49,17 @@ const PostScreen = () => {
   const [documentRequired, setDocumentRequired] = useState([]);
   const [documents, setDocuments] = useState([]);
   const isOn = useSelector((state) => state.slider.isOn);
+  const ProgramId = userData?.ProgramId;
+  
+
+  const hasPermission = (permission) => {
+    // If roleId and ProgramId match, the user has all permissions
+    if (userData?.roleId === userData?.ProgramId) {
+      return true;
+    }
+    // Otherwise, check specific permissions
+    return permissions.includes(permission);
+  };
   
    const API_KEY = services.API_KEY;
   // Access your API key (see "Set up your API key" above)
@@ -251,7 +264,7 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
   
   const continueSubmission = async (category) => {
     try {
-      const user = auth().currentUser;
+      const user = currentUser;
       const userEmail = user.email;
       const userId = user.uid;
       const createdOn = new Date();
@@ -276,7 +289,7 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
         dob: dob.toDateString(),
         category_id: categories.find(cat => cat.categoryName === category)?.id || '',
         applicationMethod: applicationMethod,
-        // documentRequired: documentRequired,
+        ProgramId:ProgramId,
       };
   
       const ticketRef = await firestore().collection('Tickets').add(ticketData);
@@ -384,7 +397,20 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
     const newDocuments = [...documents];
     newDocuments.splice(index, 1);
     setDocuments(newDocuments);
-  };
+  }; 
+  
+  if (!hasPermission('ticket_add')) {
+    return (
+      <View style={styles.permissionContainer}>
+        <View style={styles.innerContainer}>
+          <Text style={styles.errorText}>
+            You don't have permissions to Add tickets.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
@@ -708,6 +734,19 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 8,
     textAlign:'center'
+  },
+  permissionContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    paddingBottom: 106,
+  },
+  innerContainer: {
+    padding: 16,
+  },
+  errorText: {
+    fontSize: 24, // h4 equivalent in React Native
+    color: 'red', // equivalent to the "error" color
+    textAlign: 'center',
   },
 });
 

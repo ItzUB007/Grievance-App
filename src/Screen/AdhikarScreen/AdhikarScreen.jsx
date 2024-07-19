@@ -1,28 +1,20 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
-
 
 const AdhikarScreen = () => {
   const navigation = useNavigation();
 
-
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome To Adhikar </Text>
-      <TouchableOpacity style={styles.option} onPress={() => navigation.navigate('Post')}>
-        <Image source={require('../../Assets/post.png')} style={styles.image} />
-        <Text style={styles.optionText}>Add a Member</Text>
+      <Image source={require('../../Assets/logo.jpeg')} style={styles.logo} />
+      <Text style={styles.title}>Welcome To Adhikar</Text>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Post')}>
+        <Text style={styles.buttonText}>Add a Member</Text>
       </TouchableOpacity>
-      {/* Add a border line here between these two buttons */}
-      <View style={styles.separator} />
-      <TouchableOpacity style={styles.option} onPress={() => navigation.navigate('ViewStatus')}>
-        <Image source={require('../../Assets/status.png')} style={styles.image} />
-        <Text style={styles.optionText}>Update a Member</Text>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('ViewStatus')}>
+        <Text style={styles.buttonText}>Update a Member</Text>
       </TouchableOpacity>
-  
- 
     </View>
   );
 };
@@ -30,38 +22,36 @@ const AdhikarScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'column',
-    justifyContent: 'space-evenly',
+    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
-    position: 'relative',
+    padding: 20,
   },
-  option: {
-    alignItems: 'center',
-  },
-  image: {
+  logo: {
     width: 200,
     height: 200,
-    marginBottom: 10,
-    objectFit: 'contain',
-  },
-  optionText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
-  },
-  separator: {
-    width: '90%',
-    height: 1,
-    backgroundColor: '#ccc',
+    marginBottom: 20,
+    borderRadius:50
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     color: '#6200ee',
-    fontWeight: '600',
-    marginTop: 10,
+    fontWeight: '700',
+    marginBottom: 40,
   },
-
+  button: {
+    width: '80%',
+    padding: 15,
+    backgroundColor: '#6200ee',
+    alignItems: 'center',
+    borderRadius: 5,
+    marginVertical: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
 export default AdhikarScreen;

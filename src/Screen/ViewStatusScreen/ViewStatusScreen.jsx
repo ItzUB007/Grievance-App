@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Button, TextInput, ActivityIndicator, Image } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+// import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../contexts/AuthContext';
+
 
 const ViewStatusScreen = ({ navigation }) => {
+  const { currentUser, permissions,userData } = useAuth();
   const [tickets, setTickets] = useState([]);
   const [filteredTickets, setFilteredTickets] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -14,17 +17,32 @@ const ViewStatusScreen = ({ navigation }) => {
   const [lastDoc, setLastDoc] = useState(null);
   const [firstDoc, setFirstDoc] = useState(null);
   const [firstDocArr, setFirstDocArr] = useState([]);
-  const user = auth().currentUser;
-  const currentUserID = user.uid;
+  // const user = auth().currentUser;
+  const ProgramId = userData?.ProgramId;
+  const currentUserID = currentUser.uid;
   const pageSize = 10;
+  const hasPermission = (permission) => {
+    // If roleId and ProgramId match, the user has all permissions
+    if (userData?.roleId === userData?.ProgramId) {
+      return true;
+    }
+    // Otherwise, check specific permissions
+    return permissions.includes(permission);
+  };
 
   const fetchTickets = async (direction = 'next', startPoint = null) => {
     if (!currentUserID) return;
+    let id = currentUserID;
+    let field = 'createdBy_userId';
+    if (userData?.roleId === userData?.ProgramId) {
+      field = 'ProgramId'
+      id = ProgramId;
+    }
 
     setLoading(true);
     let query = firestore()
       .collection('Tickets')
-      .where('user_id', '==', currentUserID)
+      .where(`${field}`, '==', id)
       .orderBy('updated_on', 'desc')
       .limit(pageSize);
 
@@ -58,8 +76,12 @@ const ViewStatusScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    fetchTickets();
+    hasPermission && fetchTickets();
   }, [currentUserID]);
+
+
+ 
+
 
   const handleSearch = async () => {
     if (searchQuery.trim() === '') {
@@ -147,6 +169,18 @@ const ViewStatusScreen = ({ navigation }) => {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color="#6200ee" />
+      </View>
+    );
+  }  
+
+  if (!hasPermission('ticket_view')) {
+    return (
+      <View style={styles.permissionContainer}>
+        <View style={styles.innerContainer}>
+          <Text style={styles.errorText}>
+            You don't have permissions to view tickets.
+          </Text>
+        </View>
       </View>
     );
   }
@@ -263,6 +297,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  permissionContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    paddingBottom: 106,
+  },
+  innerContainer: {
+    padding: 16,
+  },
+  errorText: {
+    fontSize: 24, // h4 equivalent in React Native
+    color: 'red', // equivalent to the "error" color
+    textAlign: 'center',
   },
 });
 
