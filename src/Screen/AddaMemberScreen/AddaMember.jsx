@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 export default function AddaMember() {
   const { programData, permissions, userData } = useAuth();
@@ -13,7 +14,9 @@ export default function AddaMember() {
 
   useEffect(() => {
     console.log('Program Data: ', programData);
-    fetchSchemes(programData.schemes);
+    if (programData && programData.schemes) {
+      fetchSchemes(programData.schemes);
+    }
   }, [programData]);
 
   const fetchSchemes = async (schemeIds) => {
@@ -21,14 +24,15 @@ export default function AddaMember() {
     try {
       const schemeQuery = await firestore().collection('Schemes').where(firestore.FieldPath.documentId(), 'in', schemeIds).get();
       const schemes = schemeQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      console.log('SchemesData :',schemes);
-
+      console.log('SchemesData :', schemes);
 
       const schemeQuestions = [];
       schemes.forEach(scheme => {
-        scheme.schemeQuestions.forEach(question => {
-          schemeQuestions.push({ question: question.question, correctOption: question.option });
-        });
+        if (scheme.schemeQuestions) {
+          scheme.schemeQuestions.forEach(question => {
+            schemeQuestions.push({ question: question.question, correctOption: question.option });
+          });
+        }
       });
 
       console.log('Fetched Questions: ', schemeQuestions);
@@ -73,11 +77,22 @@ export default function AddaMember() {
   };
 
   const handleAnswerSelect = (questionId, optionId) => {
-    setAnswers(prevAnswers => ({ ...prevAnswers, [questionId]: optionId }));
+    setAnswers(prevAnswers => {
+      const updatedAnswers = { ...prevAnswers };
+      if (!updatedAnswers[questionId]) {
+        updatedAnswers[questionId] = [];
+      }
+      if (updatedAnswers[questionId].includes(optionId)) {
+        updatedAnswers[questionId] = updatedAnswers[questionId].filter(id => id !== optionId);
+      } else {
+        updatedAnswers[questionId].push(optionId);
+      }
+      return updatedAnswers;
+    });
   };
 
   const handleSubmit = () => {
-    const allAnswered = questions.every(q => answers[q.id]);
+    const allAnswered = questions.every(q => answers[q.id] && answers[q.id].length > 0);
     if (!allAnswered) {
       Alert.alert('Please answer all questions before submitting.');
       return;
@@ -91,21 +106,44 @@ export default function AddaMember() {
       const correctAnswers = await Promise.all(
         questions.map(async (q) => {
           const doc = await firestore().collection('Schemes').doc(q.id).get();
-          return doc.data().schemeQuestions.find(sq => sq.question === q.id);
+          return doc.exists ? doc.data().schemeQuestions.find(sq => sq.question === q.id) : null;
         })
       );
 
-      const isEligible = correctAnswers.every(ca => answers[ca.question] === ca.correctOption);
+      const isEligible = correctAnswers.every(ca => ca && answers[ca.question] && answers[ca.question].includes(ca.correctOption));
       const eligibilityStatus = isEligible ? 'eligible' : 'not eligible';
       Alert.alert(isEligible ? 'You are eligible for the Scheme' : 'You are not eligible for the Scheme');
 
-      await firestore().collection('Members').add({
-        name,
-        phoneNumber,
-        programId: programData.programId,
-        eligibility: eligibilityStatus,
-        answers
-      });
+      console.log(name, phoneNumber, userData.programId, eligibilityStatus, answers);
+
+      if (!name) {
+        console.error('Name is missing or undefined');
+      }
+      if (!phoneNumber) {
+        console.error('Phone Number is missing or undefined');
+      }
+      if (!userData.ProgramId) {
+        console.error('Program ID is missing or undefined');
+      }
+      if (!eligibilityStatus) {
+        console.error('Eligibility Status is missing or undefined');
+      }
+      if (!answers || Object.keys(answers).length === 0) {
+        console.error('Answers are missing or undefined');
+      }
+
+      if (name && phoneNumber && userData.ProgramId && eligibilityStatus && answers) {
+        await firestore().collection('Members').add({
+          name,
+          phoneNumber,
+          ProgramId: userData.ProgramId,
+          eligibility: eligibilityStatus,
+          answers
+        });
+        Alert.alert('Data saved successfully!');
+      } else {
+        Alert.alert('Missing required fields. Please fill in all the details.');
+      }
     } catch (error) {
       console.error('Error checking eligibility and saving data: ', error);
     }
@@ -136,9 +174,14 @@ export default function AddaMember() {
         visible={showModal}
         transparent={true}
         animationType="slide"
-        style={{marginVertical:100}}
+        style={{ marginVertical: 100 }}
       >
         <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeButton}>
+            <Icon name="close" size={25} color="red" />
+            </TouchableOpacity>
+          </View>
           <ScrollView contentContainerStyle={styles.scrollContainer}>
             {questions.map((question, index) => (
               <View key={question.id} style={styles.questionContainer}>
@@ -148,7 +191,7 @@ export default function AddaMember() {
                     key={option.id}
                     style={[
                       styles.optionButton,
-                      answers[question.id] === option.id && styles.selectedOption
+                      answers[question.id] && answers[question.id].includes(option.id) && styles.selectedOption
                     ]}
                     onPress={() => handleAnswerSelect(question.id, option.id)}
                   >
@@ -188,6 +231,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
+  modalHeader: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    position:'absolute',
+    top:7,
+    right:10,
+    zIndex:5
+  },
+  closeButton: {
+    padding: 10,
+    backgroundColor: 'white',
+    borderRadius: 5,
+  },
+  closeButtonText: {
+    fontSize: 18,
+    color: 'black',
+  },
   scrollContainer: {
     width: '100%',
     padding: 20,
@@ -200,20 +261,19 @@ const styles = StyleSheet.create({
   questionText: {
     fontSize: 18,
     marginBottom: 10,
-    color:'black'
+    color: 'black',
   },
   optionButton: {
     padding: 10,
     backgroundColor: '#f0f0f0',
     marginBottom: 5,
-    color:'blue'
+    color: 'blue',
   },
   selectedOption: {
     backgroundColor: '#cce5ff',
   },
   optionText: {
     fontSize: 16,
-    color:'blue'
+    color: 'blue',
   },
 });
-
