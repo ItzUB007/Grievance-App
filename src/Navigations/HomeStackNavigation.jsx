@@ -7,6 +7,8 @@ import ViewStatusScreen from '../Screen/ViewStatusScreen/ViewStatusScreen';
 import TicketDetails from '../Screen/ViewStatusScreen/TicketsDetails';
 import GrievanceScreen from '../Screen/GrievanceScreen/GrievanceScreen';
 import AdhikarScreen from '../Screen/AdhikarScreen/AdhikarScreen';
+import AddaMember from '../Screen/AddaMemberScreen/AddaMember';
+import UpdateaMember from '../Screen/UpdateaMemberScreen/UpdateaMember';
 
 const Stack = createStackNavigator();
 
@@ -23,6 +25,8 @@ const HomeStackNavigator = () => {
       <Stack.Screen name="TicketDetails" component={TicketDetails} />
       <Stack.Screen name="Grievance" component={GrievanceScreen} />
       <Stack.Screen name="Adhikar" component={AdhikarScreen} />
+      <Stack.Screen name="AddaMember" component={AddaMember} />
+      <Stack.Screen name="UpdateaMember" component={UpdateaMember} />
     </Stack.Navigator>
 
   );

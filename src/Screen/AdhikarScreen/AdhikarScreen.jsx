@@ -9,10 +9,10 @@ const AdhikarScreen = () => {
     <View style={styles.container}>
       <Image source={require('../../Assets/logo.jpeg')} style={styles.logo} />
       <Text style={styles.title}>Welcome To Adhikar</Text>
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Post')}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('AddaMember')}>
         <Text style={styles.buttonText}>Add a Member</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('ViewStatus')}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('UpdateaMember')}>
         <Text style={styles.buttonText}>Update a Member</Text>
       </TouchableOpacity>
     </View>

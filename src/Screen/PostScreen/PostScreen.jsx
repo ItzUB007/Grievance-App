@@ -289,8 +289,11 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
         dob: dob.toDateString(),
         category_id: categories.find(cat => cat.categoryName === category)?.id || '',
         applicationMethod: applicationMethod,
-        ProgramId:ProgramId,
+        
       };
+      if (ProgramId) {
+        ticketData.ProgramId = ProgramId;
+      }
   
       const ticketRef = await firestore().collection('Tickets').add(ticketData);
      
@@ -451,7 +454,7 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
                 style={styles.categoryList}
               />
               <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                <Icon name="close" size={25} color="gray" />
+                <Icon name="close" size={35} color="gray" />
               </TouchableOpacity>
             </View>
           </View>
@@ -701,8 +704,9 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: -5,
+    right: 0,
+    
   },
   documentContainer: {
     flexDirection: 'row',
