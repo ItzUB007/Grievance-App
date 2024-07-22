@@ -11,15 +11,14 @@ export default function AddaMember() {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [showModal, setShowModal] = useState(false);
-  var [schemes,setSchemes] = useState([])
- 
+  var [schemes, setSchemes] = useState([]);
 
-  
+
   useEffect(() => {
     console.log('Program Data: ', programData);
-    if (programData && programData.schemes) {
+    if (programData && programData.schemes ) {
       fetchSchemes(programData.schemes);
-    } 
+    }
   }, [programData]);
 
   const fetchSchemes = async (schemeIds) => {
@@ -107,8 +106,6 @@ export default function AddaMember() {
 
   const checkEligibility = async () => {
     try {
-    
-
       function haveCommonItems(arr1, arr2) {
         const set1 = new Set(arr1);
         const commonItems = arr2.filter(item => set1.has(item));
@@ -116,25 +113,23 @@ export default function AddaMember() {
       }
 
       let eligibleSchemes = [];
-      
-      schemes.forEach((scheme)=>{
+
+      schemes.forEach((scheme) => {
         let bool = true;
-        scheme.schemeQuestions.forEach((SQ)=>{
+        scheme.schemeQuestions.forEach((SQ) => {
           let existingQuestion = answers[SQ.question];
 
-          if(!haveCommonItems(SQ.option,existingQuestion)){
+          if (!haveCommonItems(SQ.option, existingQuestion)) {
             bool = false;
           }
-        })
+        });
 
-        if(bool){
-          eligibleSchemes.push({Name: scheme.Name, id: scheme.id});
+        if (bool) {
+          eligibleSchemes.push({ id: scheme.id, name: scheme.Name });
         }
-      })
+      });
 
       console.log("eligibleSchemes", eligibleSchemes);
-
-      
 
       if (!name) {
         console.error('Name is missing or undefined');
@@ -145,19 +140,27 @@ export default function AddaMember() {
       if (!userData.ProgramId) {
         console.error('Program ID is missing or undefined');
       }
-    
+
       if (!answers || Object.keys(answers).length === 0) {
         console.error('Answers are missing or undefined');
       }
-    
 
-      if (name && phoneNumber && userData.ProgramId  && answers) {
+      const formattedAnswers = questions.map(q => ({
+        id: q.id,
+        conceptName: q.ConceptName,
+        selectedOptions: (answers[q.id] || []).map(optionId => {
+          const option = q.options.find(o => o.id === optionId);
+          return { id: optionId, name: option ? option.name : 'Unknown' };
+        })
+      }));
+
+      if (name && phoneNumber && userData.ProgramId && answers) {
         await firestore().collection('Members').add({
           name,
           phoneNumber,
           ProgramId: userData.ProgramId,
-          QuestionAnswers: answers,
-          eligibleSchemes:eligibleSchemes
+          QuestionAnswers: formattedAnswers,
+          eligibleSchemes: eligibleSchemes
         });
         Alert.alert('Data saved successfully!');
       } else {
@@ -186,7 +189,7 @@ export default function AddaMember() {
         placeholderTextColor="gray"
       />
       <Button
-        title="Submit"
+        title="Proceed"
         onPress={() => setShowModal(true)}
       />
       <Modal
