@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
+import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -11,22 +11,20 @@ export default function AddaMember() {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [showModal, setShowModal] = useState(false);
-  var [schemes, setSchemes] = useState([]);
-
+  const [loading, setLoading] = useState(false);
+  const [schemes, setSchemes] = useState([]);
+  // let eligibleSchemes = [];
 
   useEffect(() => {
     console.log('Program Data: ', programData);
-    if (programData && programData.schemes ) {
-      fetchSchemes(programData.schemes);
-    }
   }, [programData]);
 
   const fetchSchemes = async (schemeIds) => {
     console.log('Fetching schemes with IDs: ', schemeIds);
     try {
       const schemeQuery = await firestore().collection('Schemes').where(firestore.FieldPath.documentId(), 'in', schemeIds).get();
-      schemes = schemeQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setSchemes(schemeQuery.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const schemes = schemeQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setSchemes(schemes);
       console.log('SchemesData :', schemes);
 
       const schemeQuestions = [];
@@ -39,7 +37,7 @@ export default function AddaMember() {
       });
 
       console.log('Fetched Questions: ', schemeQuestions);
-      fetchQuestions(schemeQuestions);
+      await fetchQuestions(schemeQuestions);
     } catch (error) {
       console.error('Error fetching schemes: ', error);
     }
@@ -94,14 +92,22 @@ export default function AddaMember() {
     });
   };
 
-  const handleSubmit = () => {
-    const allAnswered = questions.every(q => answers[q.id] && answers[q.id].length > 0);
-    if (!allAnswered) {
-      Alert.alert('Please answer all questions before submitting.');
+  const handleSubmit = async () => {
+    if (!name || !phoneNumber) {
+      Alert.alert('Please enter both name and phone number.');
       return;
     }
 
-    checkEligibility();
+    setLoading(true);
+    try {
+      await fetchSchemes(programData.schemes);
+      setShowModal(true);
+    } catch (error) {
+      console.error('Error fetching schemes and questions: ', error);
+      Alert.alert('Error fetching schemes and questions. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const checkEligibility = async () => {
@@ -130,20 +136,6 @@ export default function AddaMember() {
       });
 
       console.log("eligibleSchemes", eligibleSchemes);
-
-      if (!name) {
-        console.error('Name is missing or undefined');
-      }
-      if (!phoneNumber) {
-        console.error('Phone Number is missing or undefined');
-      }
-      if (!userData.ProgramId) {
-        console.error('Program ID is missing or undefined');
-      }
-
-      if (!answers || Object.keys(answers).length === 0) {
-        console.error('Answers are missing or undefined');
-      }
 
       const formattedAnswers = questions.map(q => ({
         id: q.id,
@@ -189,9 +181,14 @@ export default function AddaMember() {
         placeholderTextColor="gray"
       />
       <Button
-        title="Proceed"
-        onPress={() => setShowModal(true)}
+        title="Submit"
+        onPress={handleSubmit}
       />
+      {loading && (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
+        </View>
+      )}
       <Modal
         visible={showModal}
         transparent={true}
@@ -224,7 +221,7 @@ export default function AddaMember() {
             ))}
             <Button
               title="Submit"
-              onPress={handleSubmit}
+              onPress={checkEligibility}
             />
           </ScrollView>
         </View>
@@ -246,6 +243,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: 'black',
     backgroundColor: '#f0f0f0',
+  },
+  loaderContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContainer: {
     flex: 1,
