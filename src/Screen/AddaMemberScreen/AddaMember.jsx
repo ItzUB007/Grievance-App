@@ -11,26 +11,30 @@ export default function AddaMember() {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [showModal, setShowModal] = useState(false);
+  var [schemes,setSchemes] = useState([])
+ 
 
+  
   useEffect(() => {
     console.log('Program Data: ', programData);
     if (programData && programData.schemes) {
       fetchSchemes(programData.schemes);
-    }
+    } 
   }, [programData]);
 
   const fetchSchemes = async (schemeIds) => {
     console.log('Fetching schemes with IDs: ', schemeIds);
     try {
       const schemeQuery = await firestore().collection('Schemes').where(firestore.FieldPath.documentId(), 'in', schemeIds).get();
-      const schemes = schemeQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      schemes = schemeQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setSchemes(schemeQuery.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       console.log('SchemesData :', schemes);
 
       const schemeQuestions = [];
       schemes.forEach(scheme => {
         if (scheme.schemeQuestions) {
           scheme.schemeQuestions.forEach(question => {
-            schemeQuestions.push({ question: question.question, correctOption: question.option });
+            schemeQuestions.push({ question: question.question, correctOptions: question.option });
           });
         }
       });
@@ -103,18 +107,34 @@ export default function AddaMember() {
 
   const checkEligibility = async () => {
     try {
-      const correctAnswers = await Promise.all(
-        questions.map(async (q) => {
-          const doc = await firestore().collection('Schemes').doc(q.id).get();
-          return doc.exists ? doc.data().schemeQuestions.find(sq => sq.question === q.id) : null;
+    
+
+      function haveCommonItems(arr1, arr2) {
+        const set1 = new Set(arr1);
+        const commonItems = arr2.filter(item => set1.has(item));
+        return commonItems.length > 0;
+      }
+
+      let eligibleSchemes = [];
+      
+      schemes.forEach((scheme)=>{
+        let bool = true;
+        scheme.schemeQuestions.forEach((SQ)=>{
+          let existingQuestion = answers[SQ.question];
+
+          if(!haveCommonItems(SQ.option,existingQuestion)){
+            bool = false;
+          }
         })
-      );
 
-      const isEligible = correctAnswers.every(ca => ca && answers[ca.question] && answers[ca.question].includes(ca.correctOption));
-      const eligibilityStatus = isEligible ? 'eligible' : 'not eligible';
-      Alert.alert(isEligible ? 'You are eligible for the Scheme' : 'You are not eligible for the Scheme');
+        if(bool){
+          eligibleSchemes.push({Name: scheme.Name, id: scheme.id});
+        }
+      })
 
-      console.log(name, phoneNumber, userData.programId, eligibilityStatus, answers);
+      console.log("eligibleSchemes", eligibleSchemes);
+
+      
 
       if (!name) {
         console.error('Name is missing or undefined');
@@ -125,20 +145,19 @@ export default function AddaMember() {
       if (!userData.ProgramId) {
         console.error('Program ID is missing or undefined');
       }
-      if (!eligibilityStatus) {
-        console.error('Eligibility Status is missing or undefined');
-      }
+    
       if (!answers || Object.keys(answers).length === 0) {
         console.error('Answers are missing or undefined');
       }
+    
 
-      if (name && phoneNumber && userData.ProgramId && eligibilityStatus && answers) {
+      if (name && phoneNumber && userData.ProgramId  && answers) {
         await firestore().collection('Members').add({
           name,
           phoneNumber,
           ProgramId: userData.ProgramId,
-          eligibility: eligibilityStatus,
-          answers
+          QuestionAnswers: answers,
+          eligibleSchemes:eligibleSchemes
         });
         Alert.alert('Data saved successfully!');
       } else {
@@ -179,7 +198,7 @@ export default function AddaMember() {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeButton}>
-            <Icon name="close" size={25} color="red" />
+              <Icon name="close" size={25} color="red" />
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -235,10 +254,10 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    position:'absolute',
-    top:7,
-    right:10,
-    zIndex:5
+    position: 'absolute',
+    top: 7,
+    right: 10,
+    zIndex: 5
   },
   closeButton: {
     padding: 10,
