@@ -4,7 +4,7 @@ import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-export default function AddaMember() {
+export default function AddaMember({ navigation }) {
   const { programData, permissions, userData } = useAuth();
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -13,7 +13,7 @@ export default function AddaMember() {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [schemes, setSchemes] = useState([]);
-  // let eligibleSchemes = [];
+ 
 
   useEffect(() => {
     console.log('Program Data: ', programData);
@@ -119,6 +119,7 @@ export default function AddaMember() {
       }
 
       let eligibleSchemes = [];
+      let eligibleSchemesDetails = [];
 
       schemes.forEach((scheme) => {
         let bool = true;
@@ -132,6 +133,7 @@ export default function AddaMember() {
 
         if (bool) {
           eligibleSchemes.push({ id: scheme.id, name: scheme.Name });
+          eligibleSchemesDetails.push(scheme)
         }
       });
 
@@ -146,17 +148,35 @@ export default function AddaMember() {
         })
       }));
 
-      if (name && phoneNumber && userData.ProgramId && answers) {
-        await firestore().collection('Members').add({
-          name,
-          phoneNumber,
-          ProgramId: userData.ProgramId,
+      const membersRef = firestore().collection('Members');
+      const memberQuery = membersRef
+        .where('phoneNumber', '==', phoneNumber)
+        .where('name', '==', name)
+        .where('ProgramId', '==', userData.ProgramId);
+      const memberSnapshot = await memberQuery.get();
+
+      if (!memberSnapshot.empty) {
+        const memberDoc = memberSnapshot.docs[0];
+        await memberDoc.ref.update({
           QuestionAnswers: formattedAnswers,
           eligibleSchemes: eligibleSchemes
         });
-        Alert.alert('Data saved successfully!');
+        Alert.alert('Data updated successfully!');
+        navigation.navigate('EligibleSchemes', { eligibleSchemesDetails: eligibleSchemesDetails,name,phoneNumber })
       } else {
-        Alert.alert('Missing required fields. Please fill in all the details.');
+        if (name && phoneNumber && userData.ProgramId && answers) {
+          await membersRef.add({
+            name,
+            phoneNumber,
+            ProgramId: userData.ProgramId,
+            QuestionAnswers: formattedAnswers,
+            eligibleSchemes: eligibleSchemes
+          });
+          Alert.alert('Data saved successfully!');
+          
+        } else {
+          Alert.alert('Missing required fields. Please fill in all the details.');
+        }
       }
     } catch (error) {
       console.error('Error checking eligibility and saving data: ', error);
@@ -166,7 +186,7 @@ export default function AddaMember() {
   return (
     <View style={styles.container}>
       <TextInput
-        placeholder="Name"
+        placeholder="Full Name"
         value={name}
         onChangeText={setName}
         style={styles.input}
@@ -181,7 +201,7 @@ export default function AddaMember() {
         placeholderTextColor="gray"
       />
       <Button
-        title="Submit"
+        title="Proceed"
         onPress={handleSubmit}
       />
       {loading && (

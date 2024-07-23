@@ -9,6 +9,8 @@ import GrievanceScreen from '../Screen/GrievanceScreen/GrievanceScreen';
 import AdhikarScreen from '../Screen/AdhikarScreen/AdhikarScreen';
 import AddaMember from '../Screen/AddaMemberScreen/AddaMember';
 import UpdateaMember from '../Screen/UpdateaMemberScreen/UpdateaMember';
+import EligibleSchemes from '../Screen/EligibleSchemes/EligibleSchemes';
+import EligibleSchemeDetails from '../Screen/EligibleSchemes/EligibleSchemeDetails';
 
 const Stack = createStackNavigator();
 
@@ -27,6 +29,8 @@ const HomeStackNavigator = () => {
       <Stack.Screen name="Adhikar" component={AdhikarScreen} />
       <Stack.Screen name="AddaMember" component={AddaMember} />
       <Stack.Screen name="UpdateaMember" component={UpdateaMember} />
+      <Stack.Screen name="EligibleSchemes" component={EligibleSchemes} />
+      <Stack.Screen name="EligibleSchemeDetails" component={EligibleSchemeDetails} />
     </Stack.Navigator>
 
   );

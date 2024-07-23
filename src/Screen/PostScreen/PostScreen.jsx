@@ -14,7 +14,6 @@ import {
   Platform,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
-
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -27,6 +26,7 @@ import services from '../../utils/services';
 import { useSelector } from 'react-redux';
 import { launchCamera } from 'react-native-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
+
 
 
 const PostScreen = () => {
@@ -299,7 +299,7 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
      
       // Check if a member with the same name and phone number exists
       const membersRef = await firestore().collection('Members');
-      const memberQuery = membersRef.where('name', '==', fullName).where('phoneNumber', '==', phoneNo);
+      const memberQuery = membersRef.where('name', '==', fullName).where('phoneNumber', '==', phoneNo).where('ProgramId', '==', userData.ProgramId);
       const memberSnapshot = await memberQuery.get();
 
       if (!memberSnapshot.empty) {
@@ -313,7 +313,9 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
           await membersRef.add({
               name: fullName,
               phoneNumber: phoneNo,
-              TicketId: [ticketRef.id]
+              TicketId: [ticketRef.id],
+              ProgramId: userData.ProgramId,
+
           });
       }
 
