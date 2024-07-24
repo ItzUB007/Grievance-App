@@ -8,15 +8,17 @@ export default function AddaMember({ navigation }) {
   const { programData, permissions, userData } = useAuth();
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [questions, setQuestions] = useState([]);
+  var [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [schemes, setSchemes] = useState([]);
- 
+  const [schemeQuestion, setSchemeQuestion] = useState([]);
+
 
   useEffect(() => {
     console.log('Program Data: ', programData);
+     
   }, [programData]);
 
   const fetchSchemes = async (schemeIds) => {
@@ -31,12 +33,16 @@ export default function AddaMember({ navigation }) {
       schemes.forEach(scheme => {
         if (scheme.schemeQuestions) {
           scheme.schemeQuestions.forEach(question => {
-            schemeQuestions.push({ question: question.question, correctOptions: question.option });
+            schemeQuestions.push({ question: question.question, correctOptions: question.option, TypeOfMCQ: question.option.TypeOfMCQ });
+            
           });
+    
+          
         }
       });
-
-      console.log('Fetched Questions: ', schemeQuestions);
+          setSchemeQuestion(schemeQuestions)
+      // console.log('Fetched Questions: ', schemeQuestions);
+      // console.log(questions);
       await fetchQuestions(schemeQuestions);
     } catch (error) {
       console.error('Error fetching schemes: ', error);
@@ -46,13 +52,17 @@ export default function AddaMember({ navigation }) {
   const fetchQuestions = async (schemeQuestions) => {
     const questionIds = [...new Set(schemeQuestions.map(q => q.question))];
     console.log('Fetching question data for IDs: ', questionIds);
+    
+    
+ 
+    
     try {
       const questionQuery = await firestore().collection('MemberQuestions').where(firestore.FieldPath.documentId(), 'in', questionIds).get();
       const questions = questionQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      const optionPromises = questions.flatMap(question => question.ConceptOptions.map(optionId =>
+      const optionPromises = questions.flatMap(question => question.ConceptOptions ? question.ConceptOptions.map(optionId =>
         firestore().collection('Options').doc(optionId).get()
-      ));
+      ) : []);
 
       const optionDocs = await Promise.all(optionPromises);
       const options = optionDocs.map(doc => ({
@@ -60,36 +70,74 @@ export default function AddaMember({ navigation }) {
         ...doc.data()
       }));
 
+    
+
       questions.forEach(question => {
-        question.options = question.ConceptOptions.map(optionId => {
+        question.options = question.ConceptOptions ? question.ConceptOptions.map(optionId => {
           const foundOption = options.find(o => o.id === optionId);
           return {
             id: optionId,
             name: foundOption ? foundOption.Name : 'Unknown'
           };
-        });
+        }) : [];
       });
+           
+      schemeQuestions.map(item => {
+        if (item.TypeOfMCQ) {
+         questions.forEach(q => {
+          
+           if(q.id == item.question){
+             q.TypeOfMCQ = item.TypeOfMCQ;
+             console.log("checking", q)
+           }
+         })
+          //console.log(`TypeOfMCQ: ${item.correctOptions.TypeOfMCQ}`);
+          console.log("After Adding TypeOfMCQ", questions)
+          console.log(questions.find(q => q.ConceptName == "Age").TypeOfMCQ)
+         
+        } 
+        // setQuestions(questions);
+        })
+
 
       setQuestions(questions);
+      console.log('Here we want ',questions);
+
       console.log('Fetched Questions with Options: ', questions);
     } catch (error) {
       console.error('Error fetching questions: ', error);
     }
   };
 
-  const handleAnswerSelect = (questionId, optionId) => {
+  const handleAnswerSelect = (questionId, optionId, type) => {
+    console.log(type);
+    console.log(optionId)
+    console.log(questionId)
+   
     setAnswers(prevAnswers => {
       const updatedAnswers = { ...prevAnswers };
-      if (!updatedAnswers[questionId]) {
-        updatedAnswers[questionId] = [];
-      }
-      if (updatedAnswers[questionId].includes(optionId)) {
-        updatedAnswers[questionId] = updatedAnswers[questionId].filter(id => id !== optionId);
+      if (type === 'multiple') {
+       
+        if (!updatedAnswers[questionId]) {
+          updatedAnswers[questionId] = [];
+        }
+        if (updatedAnswers[questionId].includes(optionId)) {
+          updatedAnswers[questionId] = updatedAnswers[questionId].filter(id => id !== optionId);
+        } else {
+          updatedAnswers[questionId].push(optionId);
+        }
       } else {
-        updatedAnswers[questionId].push(optionId);
+        updatedAnswers[questionId] = [optionId];
       }
       return updatedAnswers;
     });
+  };
+
+  const handleNumberInput = (questionId, value) => {
+    setAnswers(prevAnswers => ({
+      ...prevAnswers,
+      [questionId]: value
+    }));
   };
 
   const handleSubmit = async () => {
@@ -126,14 +174,26 @@ export default function AddaMember({ navigation }) {
         scheme.schemeQuestions.forEach((SQ) => {
           let existingQuestion = answers[SQ.question];
 
-          if (!haveCommonItems(SQ.option, existingQuestion)) {
+          if (SQ.correctOptions && SQ.correctOptions.TypeOfMCQ === 'multiple' && !haveCommonItems(SQ.correctOptions.options, existingQuestion)) {
             bool = false;
+          } else if (SQ.correctOptions && SQ.correctOptions.TypeOfMCQ !== 'multiple' && !SQ.correctOptions.options.includes(existingQuestion[0])) {
+            bool = false;
+          } else if (SQ.correctOptions && SQ.correctOptions.Operation) {
+            if (SQ.correctOptions.Operation === '==' && SQ.correctOptions.inputValue[0] !== existingQuestion) {
+              bool = false;
+            } else if (SQ.correctOptions.Operation === 'between') {
+              const [min, max] = SQ.correctOptions.inputValue.map(Number);
+              const answerValue = Number(existingQuestion);
+              if (answerValue < min || answerValue > max) {
+                bool = false;
+              }
+            }
           }
         });
 
         if (bool) {
           eligibleSchemes.push({ id: scheme.id, name: scheme.Name });
-          eligibleSchemesDetails.push(scheme)
+          eligibleSchemesDetails.push(scheme);
         }
       });
 
@@ -142,7 +202,7 @@ export default function AddaMember({ navigation }) {
       const formattedAnswers = questions.map(q => ({
         id: q.id,
         conceptName: q.ConceptName,
-        selectedOptions: (answers[q.id] || []).map(optionId => {
+        selectedOptions: q.ConceptType === 'Number' ? [answers[q.id]] : (answers[q.id] || []).map(optionId => {
           const option = q.options.find(o => o.id === optionId);
           return { id: optionId, name: option ? option.name : 'Unknown' };
         })
@@ -162,7 +222,7 @@ export default function AddaMember({ navigation }) {
           eligibleSchemes: eligibleSchemes
         });
         Alert.alert('Data updated successfully!');
-        navigation.navigate('EligibleSchemes', { eligibleSchemesDetails: eligibleSchemesDetails,name,phoneNumber })
+        navigation.navigate('EligibleSchemes', { eligibleSchemesDetails: eligibleSchemesDetails, name, phoneNumber });
       } else {
         if (name && phoneNumber && userData.ProgramId && answers) {
           await membersRef.add({
@@ -173,7 +233,6 @@ export default function AddaMember({ navigation }) {
             eligibleSchemes: eligibleSchemes
           });
           Alert.alert('Data saved successfully!');
-          
         } else {
           Alert.alert('Missing required fields. Please fill in all the details.');
         }
@@ -182,7 +241,6 @@ export default function AddaMember({ navigation }) {
       console.error('Error checking eligibility and saving data: ', error);
     }
   };
-
   return (
     <View style={styles.container}>
       <TextInput
@@ -223,20 +281,35 @@ export default function AddaMember({ navigation }) {
           </View>
           <ScrollView contentContainerStyle={styles.scrollContainer}>
             {questions.map((question, index) => (
+            
               <View key={question.id} style={styles.questionContainer}>
-                <Text style={styles.questionText}>{`${index + 1}. ${question.ConceptName}`}</Text>
-                {question.options.map(option => (
-                  <TouchableOpacity
-                    key={option.id}
-                    style={[
-                      styles.optionButton,
-                      answers[question.id] && answers[question.id].includes(option.id) && styles.selectedOption
-                    ]}
-                    onPress={() => handleAnswerSelect(question.id, option.id)}
-                  >
-                    <Text style={styles.optionText}>{option.name}</Text>
-                  </TouchableOpacity>
-                ))}
+                <Text style={styles.questionText}>{`${index + 1}. ${question.ConceptName}`} </Text>
+                {question.ConceptType === 'Number' ? (
+                  <TextInput
+                    style={styles.numberInput}
+                    keyboardType="numeric"
+                    onChangeText={(value) => handleNumberInput(question.id, value)}
+                  />  
+                ) : (
+
+                  question.options.map(option => (
+                  
+                    <TouchableOpacity
+                      key={option.id}
+                      style={[
+                        styles.optionButton,
+                        answers[question.id] && answers[question.id].includes(option.id) && styles.selectedOption
+                      ]}
+                      onPress={() => handleAnswerSelect(question.id, option.id, question.TypeOfMCQ === 'multiple' ? 'multiple' : 'single')}
+                    > 
+                      <Text style={styles.optionText}>{option.name}  </Text>
+                    </TouchableOpacity>
+                   
+                  ))
+                
+                )}
+                   
+
               </View>
             ))}
             <Button
@@ -324,5 +397,12 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: 'blue',
+  },
+  numberInput: {
+    borderWidth: 1,
+    borderColor: 'grey',
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: '#f0f0f0',
   },
 });

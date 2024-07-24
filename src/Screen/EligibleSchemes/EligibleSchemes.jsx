@@ -7,7 +7,7 @@ export default function EligibleSchemes({ route,navigation }) {
 
   useEffect(() => {
     console.log('Eligible Schemes Details :', eligibleSchemesDetails);
-    // console.log(schemeId);
+    
   }, [eligibleSchemesDetails]);
 
   return (

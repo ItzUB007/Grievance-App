@@ -37,8 +37,8 @@ export default function UpdateaMember({ navigation }) {
       </View>
     );
   }
-
-  return (
+ 
+  return members && (
     <View style={styles.container}>
       <Text style={styles.title}>All Members</Text>
       {members.map((member, index) => (
@@ -56,7 +56,11 @@ export default function UpdateaMember({ navigation }) {
               
             </TouchableOpacity>
           ))}
-          <Text style={styles.baseText}>Available Tickets : {member.TicketId.length} </Text>
+          {member.TicketId &&
+             <Text style={styles.baseText}>Available Tickets : {member.TicketId.length} </Text>
+          
+          }
+       
              
         </View>
       ))}
