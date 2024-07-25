@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
+import { ScrollView } from 'react-native-gesture-handler';
 
 export default function UpdateaMember({ navigation }) {
   const { userData } = useAuth();
@@ -39,7 +40,7 @@ export default function UpdateaMember({ navigation }) {
   }
  
   return members && (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <Text style={styles.title}>All Members</Text>
       {members.map((member, index) => (
         <View key={index} style={styles.memberContainer}>
@@ -66,7 +67,7 @@ export default function UpdateaMember({ navigation }) {
       ))}
        
 
-    </View>
+    </ScrollView>
   );
 }
 
@@ -76,6 +77,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     backgroundColor: '#fff',
     padding: 20,
+    // marginBottom:20
   },
   memberContainer: {
     marginBottom: 20,
