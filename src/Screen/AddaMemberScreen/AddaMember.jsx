@@ -18,7 +18,6 @@ export default function AddaMember({ navigation }) {
 
   useEffect(() => {
     console.log('Program Data: ', programData);
-     
   }, [programData]);
 
   const fetchSchemes = async (schemeIds) => {
@@ -27,7 +26,7 @@ export default function AddaMember({ navigation }) {
       const schemeQuery = await firestore().collection('Schemes').where(firestore.FieldPath.documentId(), 'in', schemeIds).get();
       const schemes = schemeQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setSchemes(schemes);
-      console.log('SchemesData :', schemes);
+      console.log('SchemesDataQuestions :', schemes?.schemeQuestions);
 
       const schemeQuestions = [];
       schemes.forEach(scheme => {
@@ -43,6 +42,7 @@ export default function AddaMember({ navigation }) {
           setSchemeQuestion(schemeQuestions)
       // console.log('Fetched Questions: ', schemeQuestions);
       // console.log(questions);
+      
       await fetchQuestions(schemeQuestions);
     } catch (error) {
       console.error('Error fetching schemes: ', error);
@@ -51,9 +51,9 @@ export default function AddaMember({ navigation }) {
 
   const fetchQuestions = async (schemeQuestions) => {
     const questionIds = [...new Set(schemeQuestions.map(q => q.question))];
-    console.log('Fetching question data for IDs: ', questionIds);
+    // console.log('Fetching question data for IDs: ', questionIds);
     
-    
+    console.log('SchemesDataQuestions :', schemes);
  
     
     try {
@@ -88,31 +88,34 @@ export default function AddaMember({ navigation }) {
           
            if(q.id == item.question){
              q.TypeOfMCQ = item.TypeOfMCQ;
-             console.log("checking", q)
+            //  console.log("checking", q)
            }
          })
           //console.log(`TypeOfMCQ: ${item.correctOptions.TypeOfMCQ}`);
-          console.log("After Adding TypeOfMCQ", questions)
-          console.log(questions.find(q => q.ConceptName == "Age").TypeOfMCQ)
+          // console.log("After Adding TypeOfMCQ", questions)
+          // console.log(questions.find(q => q.ConceptName == "Age").TypeOfMCQ)
          
         } 
-        // setQuestions(questions);
+       
         })
 
 
       setQuestions(questions);
       console.log('Here we want ',questions);
+      // schemes.forEach((scheme)=> {
+      // console.log(scheme.schemeQuestions)
+      // })
 
-      console.log('Fetched Questions with Options: ', questions);
+      // console.log('Fetched Questions with Options: ', questions);
     } catch (error) {
       console.error('Error fetching questions: ', error);
     }
   };
 
   const handleAnswerSelect = (questionId, optionId, type) => {
-    console.log(type);
-    console.log(optionId)
-    console.log(questionId)
+    // console.log(type);
+    // console.log(optionId)
+    // console.log(questionId)
    
     setAnswers(prevAnswers => {
       const updatedAnswers = { ...prevAnswers };
@@ -162,32 +165,41 @@ export default function AddaMember({ navigation }) {
     try {
       function haveCommonItems(arr1, arr2) {
         const set1 = new Set(arr1);
-        const commonItems = arr2.filter(item => set1.has(item));
-        return commonItems.length > 0;
+        console.log(arr1,arr2);
+        const commonItems = arr2?.filter(item => set1.has(item));
+
+        return commonItems?.length > 0;
       }
 
       let eligibleSchemes = [];
       let eligibleSchemesDetails = [];
+      let bool = true;
+      
+  
 
+   
       schemes.forEach((scheme) => {
-        let bool = true;
+       
         scheme.schemeQuestions.forEach((SQ) => {
           let existingQuestion = answers[SQ.question];
+          console.log('existingQuesstion-',existingQuestion);
+          if (SQ.option.Operation) {
+            if (SQ.option.Operation == '==' && SQ.option.inputValue[0] !== existingQuestion) {
+                  bool = false;
+                  console.log('Condition is checking == & answere is not correct');
+                } else if (SQ.option.Operation === 'between') {
+                  console.log('Condition is checking between');
+                      const [min, max] = SQ.option.inputValue.map(Number);
+                      const answerValue = Number(existingQuestion);
+                      if (answerValue < min || answerValue > max) {
+                        bool = false;
+                        console.log('Working Fine');
+                      } }
 
-          if (SQ.correctOptions && SQ.correctOptions.TypeOfMCQ === 'multiple' && !haveCommonItems(SQ.correctOptions.options, existingQuestion)) {
+          }
+          
+          else if (!SQ.option.Operation && !haveCommonItems(SQ.option, existingQuestion)) {
             bool = false;
-          } else if (SQ.correctOptions && SQ.correctOptions.TypeOfMCQ !== 'multiple' && !SQ.correctOptions.options.includes(existingQuestion[0])) {
-            bool = false;
-          } else if (SQ.correctOptions && SQ.correctOptions.Operation) {
-            if (SQ.correctOptions.Operation === '==' && SQ.correctOptions.inputValue[0] !== existingQuestion) {
-              bool = false;
-            } else if (SQ.correctOptions.Operation === 'between') {
-              const [min, max] = SQ.correctOptions.inputValue.map(Number);
-              const answerValue = Number(existingQuestion);
-              if (answerValue < min || answerValue > max) {
-                bool = false;
-              }
-            }
           }
         });
 

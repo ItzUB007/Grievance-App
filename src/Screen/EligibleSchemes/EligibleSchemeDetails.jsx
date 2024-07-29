@@ -100,6 +100,19 @@ const EligibleSchemeDetails = ({ route }) => {
     );
   }
 
+  if(!schemeId && !schemeDetails ) {
+
+    return (
+      <View style={styles.permissionContainer}>
+        <View style={styles.innerContainer}>
+          <Text style={styles.errorText}>
+          Schemes Details is not available  
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
       {scheme && (
@@ -197,6 +210,18 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: '#333',
+  },  permissionContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    paddingBottom: 106,
+  },
+  innerContainer: {
+    padding: 16,
+  },
+  errorText: {
+    fontSize: 24, // h4 equivalent in React Native
+    color: 'red', // equivalent to the "error" color
+    textAlign: 'center',
   },
 });
 

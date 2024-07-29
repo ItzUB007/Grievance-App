@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity ,ScrollView} from 'react-native';
 
 export default function EligibleSchemes({ route,navigation }) {
   const { eligibleSchemesDetails,name, phoneNumber } = route.params;
@@ -10,8 +10,27 @@ export default function EligibleSchemes({ route,navigation }) {
     
   }, [eligibleSchemesDetails]);
 
+  if(!eligibleSchemesDetails ) {
+
+    return (
+      <View style={styles.permissionContainer}>
+        <View style={styles.innerContainer}>
+        <Text style={styles.memberTitle}>Members Details</Text>
+      <View style={styles.memberContainer}>
+      <Text style={styles.baseText}> Name : {name}</Text>
+      <Text style={styles.baseText}> Phone No : {phoneNumber}</Text>
+      </View>
+      <View style={styles.separator} />
+          <Text style={styles.errorText}>
+            You Are Not Eligible for Schemes.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <Text style={styles.title}>Eligible Schemes </Text>
       <Text style={styles.memberTitle}>Members Details</Text>
       <View style={styles.memberContainer}>
@@ -34,7 +53,7 @@ export default function EligibleSchemes({ route,navigation }) {
         
       ))}
       
-    </View>
+    </ScrollView>
   );
 }
 
@@ -81,5 +100,17 @@ const styles = StyleSheet.create({
       },
       memberContainer: {
         marginTop: -10
-      }
+      }, permissionContainer: {
+        flex: 1,
+        flexDirection: 'column',
+        paddingBottom: 106,
+      },
+      innerContainer: {
+        padding: 16,
+      },
+      errorText: {
+        fontSize: 24, // h4 equivalent in React Native
+        color: 'red', // equivalent to the "error" color
+        textAlign: 'center',
+      },
 })

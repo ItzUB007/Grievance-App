@@ -29,6 +29,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 
 
+
 const PostScreen = () => {
   const { currentUser, permissions,userData } = useAuth();
   const [categories, setCategories] = useState([]);
@@ -50,6 +51,8 @@ const PostScreen = () => {
   const [documents, setDocuments] = useState([]);
   const isOn = useSelector((state) => state.slider.isOn);
   const ProgramId = userData?.ProgramId;
+  const [state,setState] = useState('Delhi')
+  const [city,setCity] = useState('')
   
 
   const hasPermission = (permission) => {
@@ -287,8 +290,11 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
         phoneNo: phoneNo,
         gender: gender,
         dob: dob.toDateString(),
+        state:state,
+        city:city,
         category_id: categories.find(cat => cat.categoryName === category)?.id || '',
         applicationMethod: applicationMethod,
+        
         
       };
       if (ProgramId) {
@@ -523,6 +529,53 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
             onChange={onDateChange}
           />
         )}
+
+     <Text style={styles.label}>Select State</Text>
+        <Picker
+          selectedValue={state}
+          onValueChange={(itemValue) => setState(itemValue)}
+          style={styles.input}
+        >
+        <Picker.Item label="Andhra Pradesh" value="Andhra Pradesh" />
+        <Picker.Item label="Arunachal Pradesh" value="Arunachal Pradesh" />
+        <Picker.Item label="Assam" value="Assam" />
+        <Picker.Item label="Bihar" value="Bihar" />
+        <Picker.Item label="Chhattisgarh" value="Chhattisgarh" />
+        <Picker.Item label="Delhi" value="Delhi" />
+        <Picker.Item label="Goa" value="Goa" />
+        <Picker.Item label="Gujarat" value="Gujarat" />
+        <Picker.Item label="Haryana" value="Haryana" />
+        <Picker.Item label="Himachal Pradesh" value="Himachal Pradesh" />
+        <Picker.Item label="Jharkhand" value="Jharkhand" />
+        <Picker.Item label="Karnataka" value="Karnataka" />
+        <Picker.Item label="Kerala" value="Kerala" />
+        <Picker.Item label="Madhya Pradesh" value="Madhya Pradesh" />
+        <Picker.Item label="Maharashtra" value="Maharashtra" />
+        <Picker.Item label="Manipur" value="Manipur" />
+        <Picker.Item label="Meghalaya" value="Meghalaya" />
+        <Picker.Item label="Mizoram" value="Mizoram" />
+        <Picker.Item label="Nagaland" value="Nagaland" />
+        <Picker.Item label="Odisha" value="Odisha" />
+        <Picker.Item label="Punjab" value="Punjab" />
+        <Picker.Item label="Rajasthan" value="Rajasthan" />
+        <Picker.Item label="Sikkim" value="Sikkim" />
+        <Picker.Item label="Tamil Nadu" value="Tamil Nadu" />
+        <Picker.Item label="Telangana" value="Telangana" />
+        <Picker.Item label="Tripura" value="Tripura" />
+        <Picker.Item label="Uttar Pradesh" value="Uttar Pradesh" />
+        <Picker.Item label="Uttarakhand" value="Uttarakhand" />
+        <Picker.Item label="West Bengal" value="West Bengal" />
+      </Picker>
+
+      <Text style={styles.label}>City</Text>
+        <TextInput
+          placeholder="Enter Your City Name"
+          style={styles.input}
+          value={city}
+          onChangeText={setCity}
+          placeholderTextColor="gray"
+        />
+       
 
         <Text style={styles.label}>Select Priority</Text>
         <Picker
