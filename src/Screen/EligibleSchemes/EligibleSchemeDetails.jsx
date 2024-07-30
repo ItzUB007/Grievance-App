@@ -144,7 +144,7 @@ const EligibleSchemeDetails = ({ route }) => {
                   }
                      {question.questionType == 'Number' && 
                    <Text style={styles.optionText}>
-                   Value: {inputValue.length > 1 ? inputValue.join(', ') : inputValue}
+                   Value: {inputValue?.length > 1 ? inputValue.join(', ') : inputValue}
                  </Text>
                   
                   }

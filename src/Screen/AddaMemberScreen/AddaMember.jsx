@@ -40,8 +40,8 @@ export default function AddaMember({ navigation }) {
         }
       });
           setSchemeQuestion(schemeQuestions)
-      // console.log('Fetched Questions: ', schemeQuestions);
-      // console.log(questions);
+      console.log('Fetched Questions: ', schemeQuestions);
+      console.log(questions);
       
       await fetchQuestions(schemeQuestions);
     } catch (error) {
@@ -51,7 +51,7 @@ export default function AddaMember({ navigation }) {
 
   const fetchQuestions = async (schemeQuestions) => {
     const questionIds = [...new Set(schemeQuestions.map(q => q.question))];
-    // console.log('Fetching question data for IDs: ', questionIds);
+    console.log('Fetching question data for IDs: ', questionIds);
     
     console.log('SchemesDataQuestions :', schemes);
  
@@ -88,12 +88,12 @@ export default function AddaMember({ navigation }) {
           
            if(q.id == item.question){
              q.TypeOfMCQ = item.TypeOfMCQ;
-            //  console.log("checking", q)
+             console.log("checking", q)
            }
          })
-          //console.log(`TypeOfMCQ: ${item.correctOptions.TypeOfMCQ}`);
-          // console.log("After Adding TypeOfMCQ", questions)
-          // console.log(questions.find(q => q.ConceptName == "Age").TypeOfMCQ)
+          console.log(`TypeOfMCQ: ${item.correctOptions.TypeOfMCQ}`);
+          console.log("After Adding TypeOfMCQ", questions)
+          console.log(questions.find(q => q.ConceptName == "Age").TypeOfMCQ)
          
         } 
        
@@ -102,20 +102,20 @@ export default function AddaMember({ navigation }) {
 
       setQuestions(questions);
       console.log('Here we want ',questions);
-      // schemes.forEach((scheme)=> {
-      // console.log(scheme.schemeQuestions)
-      // })
+      schemes.forEach((scheme)=> {
+      console.log(scheme.schemeQuestions)
+      })
 
-      // console.log('Fetched Questions with Options: ', questions);
+      console.log('Fetched Questions with Options: ', questions);
     } catch (error) {
       console.error('Error fetching questions: ', error);
     }
   };
 
   const handleAnswerSelect = (questionId, optionId, type) => {
-    // console.log(type);
-    // console.log(optionId)
-    // console.log(questionId)
+    console.log(type);
+    console.log(optionId)
+    console.log(questionId)
    
     setAnswers(prevAnswers => {
       const updatedAnswers = { ...prevAnswers };
@@ -165,52 +165,90 @@ export default function AddaMember({ navigation }) {
     try {
       function haveCommonItems(arr1, arr2) {
         const set1 = new Set(arr1);
-        console.log(arr1,arr2);
+        console.log(arr1, arr2);
         const commonItems = arr2?.filter(item => set1.has(item));
-
         return commonItems?.length > 0;
       }
-
+  
       let eligibleSchemes = [];
       let eligibleSchemesDetails = [];
-      let bool = true;
-      
   
-
-   
       schemes.forEach((scheme) => {
-       
+        let bool = true; // Reset bool for each scheme
+  
         scheme.schemeQuestions.forEach((SQ) => {
           let existingQuestion = answers[SQ.question];
-          console.log('existingQuesstion-',existingQuestion);
-          if (SQ.option.Operation) {
-            if (SQ.option.Operation == '==' && SQ.option.inputValue[0] !== existingQuestion) {
+          console.log('existingQuestion-', existingQuestion);
+          console.log('outer', SQ.option.Operation);
+  
+          if (SQ.option?.Operation) {
+            console.log('inside', SQ.option.Operation);
+  
+            const answerValue = Number(existingQuestion);
+            const inputValue = Number(SQ.option.inputValue[0]);
+  
+            switch (SQ.option.Operation) {
+              case '==':
+                if (inputValue !== answerValue) {
                   bool = false;
-                  console.log('Condition is checking == & answere is not correct');
-                } else if (SQ.option.Operation === 'between') {
-                  console.log('Condition is checking between');
-                      const [min, max] = SQ.option.inputValue.map(Number);
-                      const answerValue = Number(existingQuestion);
-                      if (answerValue < min || answerValue > max) {
-                        bool = false;
-                        console.log('Working Fine');
-                      } }
-
-          }
-          
-          else if (!SQ.option.Operation && !haveCommonItems(SQ.option, existingQuestion)) {
+                  console.log('Condition is checking == & answer is not correct');
+                }
+                break;
+              case '!=':
+                if (inputValue === answerValue) {
+                  bool = false;
+                  console.log('Condition is checking != & answer is not correct');
+                }
+                break;
+              case '>':
+                if (answerValue <= inputValue) {
+                  bool = false;
+                  console.log('Condition is checking > & answer is not correct');
+                }
+                break;
+              case '<':
+                if (answerValue >= inputValue) {
+                  bool = false;
+                  console.log('Condition is checking < & answer is not correct');
+                }
+                break;
+              case '>=':
+                if (answerValue < inputValue) {
+                  bool = false;
+                  console.log('Condition is checking >= & answer is not correct');
+                }
+                break;
+              case '<=':
+                if (answerValue > inputValue) {
+                  bool = false;
+                  console.log('Condition is checking <= & answer is not correct');
+                }
+                break;
+              case 'between':
+                console.log('Condition is checking between');
+                const [min, max] = SQ.option.inputValue.map(Number);
+                if (answerValue < min || answerValue > max) {
+                  bool = false;
+                  console.log('Working Fine');
+                }
+                break;
+              default:
+                break;
+            }
+          } else if (SQ.option.Operation == undefined && !haveCommonItems(SQ.option?.options || SQ.option, existingQuestion)) {
             bool = false;
+            console.log('inside last if else', SQ.option.Operation);
           }
         });
-
+  
         if (bool) {
           eligibleSchemes.push({ id: scheme.id, name: scheme.Name });
           eligibleSchemesDetails.push(scheme);
         }
       });
-
+  
       console.log("eligibleSchemes", eligibleSchemes);
-
+  
       const formattedAnswers = questions.map(q => ({
         id: q.id,
         conceptName: q.ConceptName,
@@ -219,14 +257,14 @@ export default function AddaMember({ navigation }) {
           return { id: optionId, name: option ? option.name : 'Unknown' };
         })
       }));
-
+  
       const membersRef = firestore().collection('Members');
       const memberQuery = membersRef
         .where('phoneNumber', '==', phoneNumber)
         .where('name', '==', name)
         .where('ProgramId', '==', userData.ProgramId);
       const memberSnapshot = await memberQuery.get();
-
+  
       if (!memberSnapshot.empty) {
         const memberDoc = memberSnapshot.docs[0];
         await memberDoc.ref.update({
@@ -253,6 +291,10 @@ export default function AddaMember({ navigation }) {
       console.error('Error checking eligibility and saving data: ', error);
     }
   };
+  
+  
+  
+  
   return (
     <View style={styles.container}>
       <TextInput
@@ -416,5 +458,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     backgroundColor: '#f0f0f0',
+    color:'black'
   },
 });
