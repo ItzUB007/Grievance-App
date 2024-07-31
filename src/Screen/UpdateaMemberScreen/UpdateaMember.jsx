@@ -38,35 +38,27 @@ export default function UpdateaMember({ navigation }) {
       </View>
     );
   }
- 
-  return members && (
+
+  return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>All Members</Text>
-      {members.map((member, index) => (
-        <View key={index} style={styles.memberContainer}>
-          <Text style={styles.baseText}>Name: {member.name}</Text>
-          <Text style={styles.baseText}>Phone No: {member.phoneNumber}</Text>
-          <Text style={styles.baseText}>Eligible Schemes: </Text>
-          {member.eligibleSchemes && member.eligibleSchemes.map((scheme, index) => (
-            <TouchableOpacity 
-              key={index} 
-              style={styles.schemeItem}
-              onPress={() => navigation.navigate('EligibleSchemeDetails', { schemeId: scheme.id })}
-            >
-              <Text style={styles.schemeText}>Scheme Name : {scheme.name}</Text>
-              
-            </TouchableOpacity>
-          ))}
-          {member.TicketId &&
-             <Text style={styles.baseText}>Available Tickets : {member.TicketId.length} </Text>
-          
-          }
-       
-             
+      <View style={styles.table}>
+        <View style={styles.tableHeader}>
+          <Text style={[styles.tableCell, styles.headerCell]}>Name</Text>
+          <Text style={[styles.tableCell, styles.headerCell]}>Phone No</Text>
         </View>
-      ))}
-       
-
+        {members.map((member, index) => (
+          <View key={index} style={styles.tableRow}>
+            <TouchableOpacity
+              style={styles.tableCell}
+              onPress={() => navigation.navigate('MemberDetails', { member: member })}
+            >
+              <Text style={styles.linkText}>{member.name}</Text>
+            </TouchableOpacity>
+            <Text style={styles.tableCell}>{member.phoneNumber}</Text>
+          </View>
+        ))}
+      </View>
     </ScrollView>
   );
 }
@@ -74,31 +66,8 @@ export default function UpdateaMember({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'column',
     backgroundColor: '#fff',
     padding: 20,
-    // marginBottom:20
-  },
-  memberContainer: {
-    marginBottom: 20,
-    shadowOffset: { width: 1, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    padding: 10,
-    marginVertical: 5,
-    borderRadius: 5,
-    elevation: 1,
-  },
-  schemeItem: {
-    
-    marginVertical: 5,
-    borderRadius: 5,
-   
-  },
-  baseText: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
   },
   title: {
     fontSize: 20,
@@ -107,19 +76,38 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     color: '#333',
   },
-  separator: {
+  table: {
     width: '100%',
-    height: 1,
-    backgroundColor: '#ccc',
-    marginTop: 20,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f1f1',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderColor: '#ddd',
+  },
+  tableCell: {
+    flex: 1,
+    padding: 10,
+    textAlign: 'center',
+    color: 'black',
+  },
+  headerCell: {
+    fontWeight: 'bold',
+    backgroundColor: '#f7f7f7',
+  },
+  linkText: {
+    color: '#007bff',
+    textDecorationLine: 'underline',
   },
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },  schemeText: {
-    fontSize: 14,
-    color: 'blue',
-    textAlign: 'center',
   },
 });

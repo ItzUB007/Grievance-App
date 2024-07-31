@@ -91,9 +91,9 @@ export default function AddaMember({ navigation }) {
              console.log("checking", q)
            }
          })
-          console.log(`TypeOfMCQ: ${item.correctOptions.TypeOfMCQ}`);
-          console.log("After Adding TypeOfMCQ", questions)
-          console.log(questions.find(q => q.ConceptName == "Age").TypeOfMCQ)
+          // console.log(`TypeOfMCQ: ${item.correctOptions.TypeOfMCQ}`);
+          // console.log("After Adding TypeOfMCQ", questions)
+          // console.log(questions.find(q => q.ConceptName == "Age").TypeOfMCQ)
          
         } 
        

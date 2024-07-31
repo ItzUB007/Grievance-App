@@ -7,8 +7,6 @@ const EligibleSchemeDetails = ({ route }) => {
   const [scheme, setScheme] = useState(schemeDetails);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(!schemeDetails);
-  const [operation, setOperation] = useState('')
-  const [inputValue, setInputValue] = useState([])
 
   useEffect(() => {
     const fetchSchemeDetails = async () => {
@@ -42,10 +40,8 @@ const EligibleSchemeDetails = ({ route }) => {
               const questionDoc = await firestore().collection('MemberQuestions').doc(schemeQuestion.question).get();
               const questionData = questionDoc.data();
               let correctOptions = [];
-              setOperation(schemeQuestion.option.Operation)
-                setInputValue(schemeQuestion?.option?.inputValue)
-                console.log('Operation',schemeQuestion.option.Operation);
-                console.log('InputValue',schemeQuestion?.option?.inputValue);
+              const operation = schemeQuestion.option.Operation;
+              const inputValue = schemeQuestion?.option?.inputValue;
 
               if (schemeQuestion.option.options) {
                 const nestedOptionDocs = await Promise.all(
@@ -67,7 +63,7 @@ const EligibleSchemeDetails = ({ route }) => {
 
               return {
                 question: questionData?.ConceptName,
-                questionType : questionData?.ConceptType,
+                questionType: questionData?.ConceptType,
                 options: correctOptions.map(option => {
                   if (option.nestedOptions) {
                     return {
@@ -77,11 +73,13 @@ const EligibleSchemeDetails = ({ route }) => {
                   }
                   return option.Name;
                 }),
+                operation,
+                inputValue
               };
             })
           );
           setQuestions(fetchedQuestions);
-          console.log('QuestionData',fetchedQuestions);
+          console.log('QuestionData', fetchedQuestions);
         } catch (error) {
           console.error('Error fetching questions: ', error);
           Alert.alert('Error', 'Failed to fetch questions.');
@@ -100,13 +98,12 @@ const EligibleSchemeDetails = ({ route }) => {
     );
   }
 
-  if(!schemeId && !schemeDetails ) {
-
+  if (!schemeId && !schemeDetails) {
     return (
       <View style={styles.permissionContainer}>
         <View style={styles.innerContainer}>
           <Text style={styles.errorText}>
-          Schemes Details is not available  
+            Schemes Details is not available
           </Text>
         </View>
       </View>
@@ -136,18 +133,16 @@ const EligibleSchemeDetails = ({ route }) => {
               <Text style={styles.optionText}>
                 Correct Options: {Array.isArray(question.options) ? question.options.map(option =>
                   typeof option === 'string' ? option : `${option.name} (Nested: ${option.nestedOptions.join(', ')})`
-                ).join(', ') : question.options} {question.questionType == 'Number' && `${"See Operation & Values"}`}
+                ).join(', ') : question.options} {question.questionType === 'Number' && `${"See Operation & Values"}`}
               </Text>
-              {question.questionType == 'Number' && 
-                  <Text style={styles.optionText}>Operation : {operation}</Text>
-          
-                  }
-                     {question.questionType == 'Number' && 
-                   <Text style={styles.optionText}>
-                   Value: {inputValue?.length > 1 ? inputValue.join(', ') : inputValue}
-                 </Text>
-                  
-                  }
+              {question.questionType === 'Number' && (
+                <>
+                  <Text style={styles.optionText}>Operation: {question.operation}</Text>
+                  <Text style={styles.optionText}>
+                    Value: {question.inputValue?.length > 1 ? question.inputValue.join(', ') : question.inputValue}
+                  </Text>
+                </>
+              )}
             </View>
           ))}
         </View>
@@ -210,7 +205,8 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: '#333',
-  },  permissionContainer: {
+  },
+  permissionContainer: {
     flex: 1,
     flexDirection: 'column',
     paddingBottom: 106,
