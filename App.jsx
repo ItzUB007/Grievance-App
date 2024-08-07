@@ -10,6 +10,7 @@ import messaging from '@react-native-firebase/messaging';
 import { PermissionsAndroid, Platform, Alert } from 'react-native';
 import PushNotification from 'react-native-push-notification';
 
+// Create notification channel
 const createChannel = () => {
   PushNotification.createChannel(
     {
@@ -23,6 +24,11 @@ const createChannel = () => {
     (created) => console.log(`CreateChannel returned '${created}'`)
   );
 };
+
+// Set background message handler
+messaging().setBackgroundMessageHandler(async remoteMessage => {
+  console.log('Message handled in the background!', remoteMessage);
+});
 
 const App = () => {
   const [user, setUser] = useState();
@@ -54,11 +60,17 @@ const App = () => {
 
     const unsubscribe = messaging().onMessage(async remoteMessage => {
       console.log('A new FCM message arrived!', JSON.stringify(remoteMessage));
-      PushNotification.localNotification({
-        channelId: "default-channel-id", // Ensure this matches the channel ID created
-        title: remoteMessage.notification.title,
-        message: remoteMessage.notification.body,
-      });
+
+      const notificationTitle = remoteMessage.notification?.title || remoteMessage.data?.title;
+      const notificationBody = remoteMessage.notification?.body || remoteMessage.data?.body;
+
+      if (notificationTitle && notificationBody) {
+        PushNotification.localNotification({
+          channelId: "default-channel-id", // Ensure this matches the channel ID created
+          title: notificationTitle,
+          message: notificationBody,
+        });
+      }
     });
 
     return unsubscribe;

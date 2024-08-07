@@ -91,7 +91,7 @@ const ViewStatusScreen = ({ navigation }) => {
       setLoading(true);
       const querySnapshot = await firestore()
         .collection('Tickets')
-        .where('user_id', '==', currentUserID)
+        .where('createdBy_userId', '==', currentUserID)
         .orderBy('updated_on', 'desc')
         .get();
 
