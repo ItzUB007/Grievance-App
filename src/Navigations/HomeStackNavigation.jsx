@@ -12,6 +12,7 @@ import UpdateaMember from '../Screen/UpdateaMemberScreen/UpdateaMember';
 import EligibleSchemes from '../Screen/EligibleSchemes/EligibleSchemes';
 import EligibleSchemeDetails from '../Screen/EligibleSchemes/EligibleSchemeDetails';
 import MemberDetails from '../Screen/MemberDetailsScreen/MemberDetails';
+import DocumentDetails from '../Screen/DocumentScreen/DocumentDetails';
 
 const Stack = createStackNavigator();
 
@@ -31,8 +32,9 @@ const HomeStackNavigator = () => {
       <Stack.Screen name="AddaMember" component={AddaMember} />
       <Stack.Screen name="UpdateaMember" component={UpdateaMember} />
       <Stack.Screen name="MemberDetails" component={MemberDetails} />
-      <Stack.Screen name="EligibleSchemes" component={EligibleSchemes} />
-      <Stack.Screen name="EligibleSchemeDetails" component={EligibleSchemeDetails} />
+      <Stack.Screen name="EligibleDocuments&Schemes" component={EligibleSchemes} />
+      <Stack.Screen name="Scheme Details" component={EligibleSchemeDetails} />
+      <Stack.Screen name="Document Details" component={DocumentDetails} />
     </Stack.Navigator>
 
   );

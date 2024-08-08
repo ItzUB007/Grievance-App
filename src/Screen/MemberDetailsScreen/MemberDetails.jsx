@@ -22,7 +22,7 @@ export default function MemberDetails({ route, navigation }) {
     return options;
   };
 
-  if (!member.QuestionAnswers && !member.eligibleSchemes) {
+  if (!member.QuestionAnswers && !member.eligibleSchemes && !member.eligibleDocuments) {
     return (
       <View style={styles.permissionContainer}>
         <View style={styles.innerContainer}>
@@ -30,8 +30,7 @@ export default function MemberDetails({ route, navigation }) {
             You are not eligible for Schemes
           </Text>
           {member.TicketId &&
-             <Text style={styles.baseText}>Available Tickets : {member.TicketId.length} </Text>
-          
+            <Text style={styles.baseText}>Available Tickets : {member.TicketId.length} </Text>
           }
         </View>
       </View>
@@ -41,27 +40,58 @@ export default function MemberDetails({ route, navigation }) {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.detailsContainer}>
-      <Text style={styles.baseText}>Member Name : {member.name} </Text>
-      <Text style={styles.baseText}>Member PhoneNo : {member.phoneNumber} </Text>
-      {member.TicketId &&
-             <Text style={styles.baseText}>Available Tickets : {member.TicketId.length} </Text>
-          
-          }
-          {member.eligibleSchemes &&
-           <Text style={styles.baseText}>Eligible Schemes: {member.eligibleSchemes?.length}</Text>
-          }
-       
-       
-        {member.eligibleSchemes && member.eligibleSchemes?.map((scheme, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.schemeItem}
-            onPress={() => navigation.navigate('EligibleSchemeDetails', { schemeId: scheme.id })}
-          >
-            <Text style={styles.schemeText}> {scheme.name}</Text>
-          </TouchableOpacity>
-        ))}
+        <Text style={styles.baseText}>Member Name : {member.name} </Text>
+        <Text style={styles.baseText}>Member PhoneNo : {member.phoneNumber} </Text>
+        {member.TicketId &&
+          <Text style={styles.baseText}>Available Tickets : {member.TicketId.length} </Text>
+        }
+        {member.eligibleSchemes &&
+          <Text style={styles.baseText}>Eligible Schemes: {member.eligibleSchemes?.length}</Text>
+        }
+        {member.eligibleDocuments &&
+          <Text style={styles.baseText}>Eligible Documents: {member.eligibleDocuments?.length}</Text>
+        }
       </View>
+      {member.eligibleSchemes && member.eligibleSchemes.length > 0 && (
+        <View style={styles.tableContainer}>
+          <Text style={styles.tableHeader}>Eligible Schemes</Text>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCellHeader}>Name</Text>
+            <Text style={styles.tableCellHeader}>Eligibility</Text>
+          </View>
+          {member.eligibleSchemes.map((scheme, index) => (
+            <View key={index} style={styles.tableRow}>
+              <TouchableOpacity
+                style={styles.schemeItem}
+                onPress={() => navigation.navigate('Scheme Details', { schemeId: scheme.id })}
+              >
+                <Text style={styles.schemeText}>{scheme.name}</Text>
+              </TouchableOpacity>
+              <Text style={styles.tableCell}>Eligible</Text>
+            </View>
+          ))}
+        </View>
+      )}
+      {member.eligibleDocuments && member.eligibleDocuments.length > 0 && (
+        <View style={styles.tableContainer}>
+          <Text style={styles.tableHeader}>Eligible Documents</Text>
+          <View style={styles.tableRow}>
+            <Text style={styles.tableCellHeader}>Name</Text>
+            <Text style={styles.tableCellHeader}>Eligibility</Text>
+          </View>
+          {member.eligibleDocuments.map((document, index) => (
+            <View key={index} style={styles.tableRow}>
+              <TouchableOpacity
+                style={styles.schemeItem}
+                onPress={() => navigation.navigate('Document Details', { schemeId: document.id })}
+              >
+                <Text style={styles.schemeText}>{document.name}</Text>
+              </TouchableOpacity>
+              <Text style={styles.tableCell}>Eligible</Text>
+            </View>
+          ))}
+        </View>
+      )}
       <View style={styles.questionsContainer}>
         <Text style={styles.questionHeader}>Questions and Selected Options:</Text>
         {questionAnswers?.map((answer, index) => (
@@ -73,7 +103,6 @@ export default function MemberDetails({ route, navigation }) {
           </View>
         ))}
       </View>
-  
     </ScrollView>
   );
 }
@@ -110,6 +139,42 @@ const styles = StyleSheet.create({
     shadowRadius: 1.41,
     elevation: 2,
   },
+  tableContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    margin: 10,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  tableHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  tableCellHeader: {
+    flex: 1,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: 'black',
+  },
+  tableCell: {
+    flex: 1,
+    textAlign: 'center',
+    color: 'black',
+  },
   questionsContainer: {
     backgroundColor: 'white',
     padding: 20,
@@ -138,7 +203,8 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: '#333',
-  },   permissionContainer: {
+  },
+  permissionContainer: {
     flex: 1,
     flexDirection: 'column',
     paddingBottom: 106,

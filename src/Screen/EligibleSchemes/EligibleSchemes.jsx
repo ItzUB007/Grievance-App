@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity ,ScrollView} from 'react-native';
 
 export default function EligibleSchemes({ route,navigation }) {
-  const { eligibleSchemesDetails,name, phoneNumber } = route.params;
+  const { eligibleSchemesDetails,name, phoneNumber,eligibleDocumentsDetails } = route.params;
 
 
   useEffect(() => {
@@ -10,7 +10,7 @@ export default function EligibleSchemes({ route,navigation }) {
     
   }, [eligibleSchemesDetails]);
 
-  if(!eligibleSchemesDetails ) {
+  if(!eligibleSchemesDetails && !eligibleDocumentsDetails) {
 
     return (
       <View style={styles.permissionContainer}>
@@ -22,7 +22,7 @@ export default function EligibleSchemes({ route,navigation }) {
       </View>
       <View style={styles.separator} />
           <Text style={styles.errorText}>
-            You Are Not Eligible for Schemes.
+            You Are Not Eligible for Schemes & Documents.
           </Text>
         </View>
       </View>
@@ -31,7 +31,7 @@ export default function EligibleSchemes({ route,navigation }) {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Eligible Schemes </Text>
+      <Text style={styles.title}>Eligible Schemes & Documents </Text>
       <Text style={styles.memberTitle}>Members Details</Text>
       <View style={styles.memberContainer}>
       <Text style={styles.baseText}> Name : {name}</Text>
@@ -40,7 +40,21 @@ export default function EligibleSchemes({ route,navigation }) {
       <View style={styles.separator} />
       {eligibleSchemesDetails && eligibleSchemesDetails.map((scheme, index) => (
         <TouchableOpacity style={styles.SchemeItem} key={index}
-        onPress={() => navigation.navigate('EligibleSchemeDetails', { schemeDetails:scheme })}>
+        onPress={() => navigation.navigate('Scheme Details', { schemeDetails:scheme })}>
+          <Text style={styles.baseText}>Scheme Name: {scheme.Name}</Text>
+          {/* <Text>Scheme ID: {scheme.id}</Text> */}
+          <Text style={styles.baseText}>Application Method : {scheme.ApplicationMethod}</Text>
+          {/* Add more details as required */}
+          <Text style={styles.baseText}>SchemeType : {scheme.SchemeType}</Text>
+          <Text style={styles.baseText}>Govt Fee : {scheme.GovtFee}</Text>
+          
+          
+        </TouchableOpacity>
+        
+      ))} 
+           {eligibleDocumentsDetails && eligibleDocumentsDetails.map((scheme, index) => (
+        <TouchableOpacity style={styles.SchemeItem} key={index}
+        onPress={() => navigation.navigate('Document Details', { schemeDetails:scheme })}>
           <Text style={styles.baseText}>Scheme Name: {scheme.Name}</Text>
           {/* <Text>Scheme ID: {scheme.id}</Text> */}
           <Text style={styles.baseText}>Application Method : {scheme.ApplicationMethod}</Text>
@@ -52,6 +66,9 @@ export default function EligibleSchemes({ route,navigation }) {
         </TouchableOpacity>
         
       ))}
+ 
+
+
       
     </ScrollView>
   );

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 
-const EligibleSchemeDetails = ({ route }) => {
+const DocumentDetails = ({ route }) => {
   const { schemeDetails, schemeId } = route.params;
   const [scheme, setScheme] = useState(schemeDetails);
   const [questions, setQuestions] = useState([]);
@@ -14,7 +14,7 @@ const EligibleSchemeDetails = ({ route }) => {
       if (!schemeDetails && schemeId) {
         setLoading(true);
         try {
-          const schemeDoc = await firestore().collection('Schemes').doc(schemeId).get();
+          const schemeDoc = await firestore().collection('Documents').doc(schemeId).get();
           if (schemeDoc.exists) {
             const schemeData = schemeDoc.data();
             setScheme(schemeData);
@@ -139,7 +139,7 @@ const EligibleSchemeDetails = ({ route }) => {
       <View style={styles.permissionContainer}>
         <View style={styles.innerContainer}>
           <Text style={styles.errorText}>
-            Schemes Details is not available
+            Document Details is not available
           </Text>
         </View>
       </View>
@@ -303,4 +303,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default EligibleSchemeDetails;
+export default DocumentDetails;
