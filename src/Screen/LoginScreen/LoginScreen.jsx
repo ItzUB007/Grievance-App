@@ -29,7 +29,7 @@ const LoginScreen = () => {
       .signInWithEmailAndPassword(email, password)
       .then(response => {
         const uid = response.user.uid;
-        if (response.user.emailVerified) {
+        if (response.user) {
           firestore()
             .collection('users')
             .doc(uid)
@@ -41,7 +41,7 @@ const LoginScreen = () => {
             });
         } else {
           setLoading(false);
-          Alert.alert('Verify your email first');
+          Alert.alert('User Not Found Try Again');
           auth().signOut();
         }
       })

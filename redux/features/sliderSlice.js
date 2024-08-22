@@ -4,7 +4,7 @@ import { createSlice } from '@reduxjs/toolkit';
 const sliderSlice = createSlice({
   name: 'slider',
   initialState: {
-    isOn: true,
+    isOn: false,
   },
   reducers: {
     toggleSlider: (state) => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
+import { Picker } from '@react-native-picker/picker';
 
 const DocumentDetails = ({ route }) => {
   const { schemeDetails, schemeId } = route.params;
@@ -8,6 +9,11 @@ const DocumentDetails = ({ route }) => {
   const [questions, setQuestions] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(!schemeDetails);
+  const [language, setLanguage] = useState('English'); // Default language
+  const [alertShown, setAlertShown] = useState(false);
+  const [languageAvailable, setLanguageAvailable] = useState(true);
+
+
 
   useEffect(() => {
     const fetchSchemeDetails = async () => {
@@ -126,6 +132,33 @@ const DocumentDetails = ({ route }) => {
     fetchSchemeDetails();
   }, [schemeDetails, schemeId]);
 
+  useEffect(() => {
+    const checkLanguageAvailability = () => {
+      let available = true;
+      if (language === 'Hindi') {
+        available = Object.keys(scheme || {}).some(key => key.endsWith('_Hindi'));
+      } else if (language === 'Marathi') {
+        available = Object.keys(scheme || {}).some(key => key.endsWith('_Marathi'));
+      }
+      setLanguageAvailable(available);
+  
+      if (!available) {
+        Alert.alert('This Language is not available. Reverting back to English.');
+        setLanguage('English');
+      }
+    };
+  
+    checkLanguageAvailability();
+  }, [language, scheme]);
+  const getLocalizedField = (field) => {
+    if (language === 'Hindi') {
+      return scheme[`${field}_Hindi`] || scheme[field];
+    } else if (language === 'Marathi') {
+      return scheme[`${field}_Marathi`] || scheme[field];
+    }
+    return scheme[field];
+  };
+  
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
@@ -134,6 +167,7 @@ const DocumentDetails = ({ route }) => {
     );
   }
 
+  
   if (!schemeId && !schemeDetails) {
     return (
       <View style={styles.permissionContainer}>
@@ -148,18 +182,27 @@ const DocumentDetails = ({ route }) => {
 
   return (
     <ScrollView style={styles.container}>
-      {scheme && (
-        <View style={styles.detailsContainer}>
-          <Text style={styles.detailText}>Scheme Name: {scheme.Name}</Text>
-          <Text style={styles.detailText}>Application Method: {scheme.ApplicationMethod}</Text>
-          <Text style={styles.detailText}>Govt Fee: {scheme.GovtFee}</Text>
-          <Text style={styles.detailText}>Description: {scheme.Description}</Text>
-          <Text style={styles.detailText}>Eligibility: {scheme.Eligibility}</Text>
-          <Text style={styles.detailText}>Scheme Type: {scheme.SchemeType}</Text>
-          <Text style={styles.detailText}>Benefit Description: {scheme.benefitDescription}</Text>
-          <Text style={styles.detailText}>Process: {scheme.process}</Text>
-        </View>
-      )}
+        <Picker
+      selectedValue={language}
+      style={styles.picker}
+      onValueChange={(itemValue) => setLanguage(itemValue)}
+    >
+      <Picker.Item label="English" value="English" />
+      <Picker.Item label="Hindi" value="Hindi" />
+      <Picker.Item label="Marathi" value="Marathi" />
+    </Picker>
+         {scheme && (
+      <View style={styles.detailsContainer}>
+        <Text style={styles.detailText}>Scheme Name: {getLocalizedField('Name')}</Text>
+        <Text style={styles.detailText}>Application Method: {getLocalizedField('ApplicationMethod')}</Text>
+        <Text style={styles.detailText}>Govt Fee: {getLocalizedField('GovtFee')}</Text>
+        <Text style={styles.detailText}>Description: {getLocalizedField('Description')}</Text>
+        <Text style={styles.detailText}>Eligibility: {getLocalizedField('Eligibility')}</Text>
+        <Text style={styles.detailText}>Scheme Type: {getLocalizedField('SchemeType')}</Text>
+        <Text style={styles.detailText}>Benefit Description: {getLocalizedField('benefitDescription')}</Text>
+        <Text style={styles.detailText}>Process: {getLocalizedField('process')}</Text>
+      </View>
+    )}
       {questions.length > 0 && (
         <View style={styles.questionsContainer}>
           <Text style={styles.questionHeader}>Questions and Correct Options:</Text>

@@ -76,3 +76,4 @@ yarn-error.log
 # Environment Variables
 .env
 android/app/release/Grievence.apk
+android/app/release/app-release.apk

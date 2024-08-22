@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import Icon from 'react-native-vector-icons/FontAwesome';
+// import AadharScanner from '../../components/AadharScanner';
+// import Icon from 'react-native-vector-icons/FontAwesome';
 
 export default function AddaMember({ navigation }) {
   const { programData, permissions, userData } = useAuth();
@@ -16,14 +17,25 @@ export default function AddaMember({ navigation }) {
   const [documents, setDocuments] = useState([]);
   const [schemeQuestions, setSchemeQuestions] = useState([]);
   const [documentQuestions, setDocumentQuestions] = useState([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [lastFourDigits, setLastFourDigits] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+
 
   useEffect(() => {
     console.log('Program Data: ', programData);
   }, [programData]);
+   const handleScanComplete = (data) => {
+    setShowScanner(false);
+    if (data) {
+      setName(data.name);
+      setLastFourDigits(data.lastFourDigits);
+    }
+  };
 
   const fetchSchemesAndDocuments = async (schemeIds, documentIds) => {
-    console.log('Fetching schemes with IDs: ', schemeIds);
-    console.log('Fetching documents with IDs: ', documentIds);
+    // console.log('Fetching schemes with IDs: ', schemeIds);
+    // console.log('Fetching documents with IDs: ', documentIds);
     try {
       // Fetch schemes
       const schemeQuery = await firestore().collection('Schemes').where(firestore.FieldPath.documentId(), 'in', schemeIds).get();
@@ -348,7 +360,7 @@ export default function AddaMember({ navigation }) {
 
       const membersRef = firestore().collection('Members');
       const memberQuery = membersRef
-        .where('phoneNumber', '==', phoneNumber)
+        .where('AadharlastFourDigits', '==', lastFourDigits)
         .where('name', '==', name)
         .where('ProgramId', '==', userData.ProgramId);
       const memberSnapshot = await memberQuery.get();
@@ -367,6 +379,7 @@ export default function AddaMember({ navigation }) {
           await membersRef.add({
             name,
             phoneNumber,
+            AadharlastFourDigits:lastFourDigits,
             ProgramId: userData.ProgramId,
             QuestionAnswers: formattedAnswers,
             eligibleSchemes: eligibleSchemes,
@@ -384,77 +397,101 @@ export default function AddaMember({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <TextInput
-        placeholder="Full Name"
-        value={name}
-        onChangeText={setName}
+      {questions.length === 0 && (
+        <>
+           {/* <AadharScanner onScan={(data) => {
+          // setAadharData(data);
+          setName(data.name);
+          setLastFourDigits(data.lastFourDigits);
+        }} /> */}
+          <TextInput
+            placeholder="Full Name"
+            value={name}
+            onChangeText={setName}
+            style={styles.input}
+            placeholderTextColor="gray"
+          />
+          <TextInput
+            placeholder="Phone Number"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            style={styles.input}
+            keyboardType="phone-pad"
+            placeholderTextColor="gray"
+          />
+           <TextInput
+        value={lastFourDigits}
+        onChangeText={setLastFourDigits}
+        keyboardType="numeric"
+        maxLength={4}
         style={styles.input}
-        placeholderTextColor="gray"
+        placeholder="Enter Aadhar last 4 digits"
       />
-      <TextInput
-        placeholder="Phone Number"
-        value={phoneNumber}
-        onChangeText={setPhoneNumber}
-        style={styles.input}
-        keyboardType="phone-pad"
-        placeholderTextColor="gray"
-      />
-      <Button
-        title="Proceed"
-        onPress={handleSubmit}
-      />
+          <Button
+            title="Proceed"
+            onPress={handleSubmit}
+          />
+        </>
+      )}
       {loading && (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color="#0000ff" />
         </View>
       )}
-      <Modal
-        visible={showModal}
-        transparent={true}
-        animationType="slide"
-        style={{ marginVertical: 100 }}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeButton}>
-              <Icon name="close" size={25} color="red" />
-            </TouchableOpacity>
+  
+      {questions.length > 0 && (
+        <ScrollView contentContainerStyle={styles.fullScreenQuestionContainer}>
+          <View style={styles.questionContainer}>
+            <Text style={styles.questionText}>{`${currentQuestionIndex + 1}. ${questions[currentQuestionIndex].ConceptName}`} </Text>
+            {questions[currentQuestionIndex].ConceptType === 'Number' ? (
+              <TextInput
+                style={styles.numberInput}
+                keyboardType="numeric"
+                value={answers[questions[currentQuestionIndex].id] || ''}
+                placeholder='Enter Your Answere'
+                onChangeText={(value) => handleNumberInput(questions[currentQuestionIndex].id, value)}
+              />  
+            ) : (
+              questions[currentQuestionIndex].options.map(option => (
+                <TouchableOpacity
+                  key={option.id}
+                  style={[
+                    styles.optionButton,
+                    answers[questions[currentQuestionIndex].id] && answers[questions[currentQuestionIndex].id].includes(option.id) && styles.selectedOption
+                  ]}
+                  onPress={() => handleAnswerSelect(questions[currentQuestionIndex].id, option.id, questions[currentQuestionIndex].TypeOfMCQ === 'multiple' ? 'multiple' : 'single')}
+                > 
+                  <Text style={styles.optionText}>{option.name}</Text>
+                </TouchableOpacity>
+              ))
+            )}
           </View>
-          <ScrollView contentContainerStyle={styles.scrollContainer}>
-            {questions.map((question, index) => (
-              <View key={question.id} style={styles.questionContainer}>
-                <Text style={styles.questionText}>{`${index + 1}. ${question.ConceptName}`} </Text>
-                {question.ConceptType === 'Number' ? (
-                  <TextInput
-                    style={styles.numberInput}
-                    keyboardType="numeric"
-                    onChangeText={(value) => handleNumberInput(question.id, value)}
-                  />  
-                ) : (
-                  question.options.map(option => (
-                    <TouchableOpacity
-                      key={option.id}
-                      style={[
-                        styles.optionButton,
-                        answers[question.id] && answers[question.id].includes(option.id) && styles.selectedOption
-                      ]}
-                      onPress={() => handleAnswerSelect(question.id, option.id, question.TypeOfMCQ === 'multiple' ? 'multiple' : 'single')}
-                    > 
-                      <Text style={styles.optionText}>{option.name}  </Text>
-                    </TouchableOpacity>
-                  ))
-                )}
-              </View>
-            ))}
-            <Button
-              title="Submit"
-              onPress={checkEligibility}
-            />
-          </ScrollView>
-        </View>
-      </Modal>
+  
+          {/* Add Previous and Next buttons */}
+          <View style={styles.navigationButtons}>
+            {currentQuestionIndex > 0 && (
+              <Button
+                title="Previous"
+                onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex - 1)}
+              />
+            )}
+            {currentQuestionIndex < questions.length - 1 ? (
+              <Button
+                title="Next"
+                onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex + 1)}
+              />
+            ) : (
+              <Button
+                title="Submit"
+                onPress={checkEligibility}
+              />
+            )}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
+  
 }
 
 const styles = StyleSheet.create({
@@ -481,49 +518,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  modalContainer: {
+  fullScreenQuestionContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalHeader: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    position: 'absolute',
-    top: 7,
-    right: 10,
-    zIndex: 5
-  },
-  closeButton: {
-    padding: 10,
-    backgroundColor: 'white',
-    borderRadius: 5,
-  },
-  closeButtonText: {
-    fontSize: 18,
-    color: 'black',
-  },
-  scrollContainer: {
-    width: '100%',
-    padding: 20,
-    backgroundColor: 'white',
-    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+    backgroundColor: '#fff',
   },
   questionContainer: {
     marginBottom: 20,
   },
   questionText: {
-    fontSize: 18,
-    marginBottom: 10,
+    fontSize: 20,
+    marginBottom: 20,
     color: 'black',
+    textAlign: 'center',
   },
   optionButton: {
     padding: 10,
     backgroundColor: '#f0f0f0',
-    marginBottom: 5,
-    color: 'blue',
+    marginBottom: 10,
+    borderRadius: 5,
+    alignItems: 'center',
   },
   selectedOption: {
     backgroundColor: '#cce5ff',
@@ -538,6 +554,19 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     backgroundColor: '#f0f0f0',
-    color: 'black'
+    color: 'black',
+    textAlign: 'center',
   },
+  navigationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 40,
+  },  fullScreenQuestionContainer: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+    backgroundColor: '#fff',
+  },  
 });
+
