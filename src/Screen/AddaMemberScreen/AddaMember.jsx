@@ -3,7 +3,7 @@ import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, Scr
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import AadharScanner from '../../components/AadharScanner';
-// import Icon from 'react-native-vector-icons/FontAwesome';
+
 
 export default function AddaMember({ navigation }) {
   const { programData, permissions, userData } = useAuth();
@@ -20,6 +20,7 @@ export default function AddaMember({ navigation }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [lastFourDigits, setLastFourDigits] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [manualEntry, setManualEntry] = useState(false);
 
 
   useEffect(() => {
@@ -400,43 +401,64 @@ export default function AddaMember({ navigation }) {
   return (
     <View style={styles.container}>
       {questions.length === 0 && (
-        <>
-           {showScanner ? (
-        <AadharScanner onScan={handleScanComplete} />
-      ) : (
-        <>
-          <Button title="Scan Aadhar" onPress={() => setShowScanner(true)} />
-          <TextInput
-            placeholder="Full Name"
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-            placeholderTextColor="gray"
-          />
-          <TextInput
-            placeholder="Phone Number"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            style={styles.input}
-            keyboardType="phone-pad"
-            placeholderTextColor="gray"
-          />
-          <TextInput
-            value={lastFourDigits}
-            onChangeText={setLastFourDigits}
-            keyboardType="numeric"
-            maxLength={4}
-            style={styles.input}
-            placeholder="Enter Aadhar last 4 digits"
-          />
-             <Button
-            title="Proceed"
-            onPress={handleSubmit}
-          />
-        </>
-      )}
-       
-        </>
+       <>
+       {showScanner ? (
+         <AadharScanner onScan={handleScanComplete} />
+       ) : (
+         <View style={styles.container}>
+           <TouchableOpacity style={styles.button} onPress={() => setShowScanner(true)}>
+             <Text style={styles.buttonText}>SCAN AADHAR</Text>
+           </TouchableOpacity>
+ 
+           <TouchableOpacity
+             style={styles.button}
+             onPress={() =>
+               Alert.alert(
+                 'Manual Entry',
+                 'Do you want to enter information manually?',
+                 [
+                   { text: 'Cancel', style: 'cancel' },
+                   { text: 'OK', onPress: () => setManualEntry(true) },
+                 ],
+                 { cancelable: true }
+               )
+             }
+           >
+             <Text style={styles.buttonText}>ENTER MANUALLY</Text>
+           </TouchableOpacity>
+ 
+           <TextInput
+             placeholder="Full Name"
+             value={name}
+             onChangeText={setName}
+             style={styles.input}
+             placeholderTextColor="gray"
+             editable={manualEntry} // Disable unless manualEntry is true
+           />
+           <TextInput
+             placeholder="Phone Number"
+             value={phoneNumber}
+             onChangeText={setPhoneNumber}
+             style={styles.input}
+             keyboardType="phone-pad"
+             placeholderTextColor="gray"
+           />
+           <TextInput
+             value={lastFourDigits}
+             onChangeText={setLastFourDigits}
+             keyboardType="numeric"
+             maxLength={4}
+             style={styles.input}
+             placeholder="Enter Aadhar last 4 digits"
+             editable={manualEntry} // Disable unless manualEntry is true
+           />
+ 
+           <TouchableOpacity style={styles.proceedButton} onPress={handleSubmit}>
+             <Text style={styles.proceedButtonText}>PROCEED</Text>
+           </TouchableOpacity>
+         </View>
+       )}
+     </>
       )}
       {loading && (
         <View style={styles.loaderContainer}>
@@ -573,5 +595,53 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     backgroundColor: '#fff',
   },  
+ 
+  button: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    marginVertical: 10,
+    alignItems: 'center',
+    elevation: 3, // Add shadow for Android
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, // Add shadow for iOS
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  input: {
+    height: 48,
+    borderColor: '#CCCCCC',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    marginVertical: 10,
+    fontSize: 16,
+    backgroundColor: '#F8F8F8',
+  },
+  proceedButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    marginVertical: 20,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  proceedButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
 });
 

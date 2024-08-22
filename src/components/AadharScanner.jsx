@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Button, Text, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Button, Text, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 
 export default function AadharScanner({ onScan }) {
   const [hasPermission, setHasPermission] = useState(false);
+  const [loading, setLoading] = useState(false); // State to manage the loader
   const cameraRef = useRef(null);
   const device = useCameraDevice('back');
 
@@ -19,19 +20,20 @@ export default function AadharScanner({ onScan }) {
   }, []);
 
   const handleCapture = async () => {
+    setLoading(true); // Start the loader
+
     try {
       if (cameraRef.current) {
         console.log('Camera ref is initialized');
         
-        // Configuring the camera settings (You can adjust these based on your needs)
         const photo = await cameraRef.current.takePhoto({
           qualityPrioritization: 'quality',
+          skipMetadata: true,  // This might help avoid configuration issues
         });
 
         if (photo && photo.path) {
           console.log('Photo path:', photo.path);
 
-          // Convert the path to URI (important for Android)
           let photoUri = photo.path;
           if (Platform.OS === 'android') {
             photoUri = `file://${photo.path}`;
@@ -39,11 +41,9 @@ export default function AadharScanner({ onScan }) {
 
           console.log('Photo URI:', photoUri);
 
-          // Perform text recognition
           const result = await TextRecognition.recognize(photoUri);
           const recognizedText = result.text;
 
-          // Extract data from recognized text
           const name = extractName(recognizedText);
           const lastFourDigits = extractLastFourDigits(recognizedText);
 
@@ -62,6 +62,8 @@ export default function AadharScanner({ onScan }) {
     } catch (error) {
       console.error('Error scanning Aadhar:', error);
       Alert.alert('An error occurred while scanning. Please try again.');
+    } finally {
+      setLoading(false); // Stop the loader
     }
   };
 
@@ -97,10 +99,14 @@ export default function AadharScanner({ onScan }) {
         isActive={true}
         photo={true}
         videoStabilizationMode="auto"
-        hdr={false}
-        lowLightBoost={true}
+         //hdr={false}
+         //lowLightBoost={true}
       />
-      <Button title="Capture" onPress={handleCapture} />
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" /> // Loader while capturing
+      ) : (
+        <Button title="Capture" onPress={handleCapture} />
+      )}
     </View>
   );
 }
@@ -112,3 +118,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+
+
+
+
