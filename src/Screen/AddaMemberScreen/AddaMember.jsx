@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-// import AadharScanner from '../../components/AadharScanner';
+import AadharScanner from '../../components/AadharScanner';
 // import Icon from 'react-native-vector-icons/FontAwesome';
 
 export default function AddaMember({ navigation }) {
@@ -25,7 +25,9 @@ export default function AddaMember({ navigation }) {
   useEffect(() => {
     console.log('Program Data: ', programData);
   }, [programData]);
-   const handleScanComplete = (data) => {
+
+  
+  const handleScanComplete = (data) => {
     setShowScanner(false);
     if (data) {
       setName(data.name);
@@ -399,11 +401,11 @@ export default function AddaMember({ navigation }) {
     <View style={styles.container}>
       {questions.length === 0 && (
         <>
-           {/* <AadharScanner onScan={(data) => {
-          // setAadharData(data);
-          setName(data.name);
-          setLastFourDigits(data.lastFourDigits);
-        }} /> */}
+           {showScanner ? (
+        <AadharScanner onScan={handleScanComplete} />
+      ) : (
+        <>
+          <Button title="Scan Aadhar" onPress={() => setShowScanner(true)} />
           <TextInput
             placeholder="Full Name"
             value={name}
@@ -419,18 +421,21 @@ export default function AddaMember({ navigation }) {
             keyboardType="phone-pad"
             placeholderTextColor="gray"
           />
-           <TextInput
-        value={lastFourDigits}
-        onChangeText={setLastFourDigits}
-        keyboardType="numeric"
-        maxLength={4}
-        style={styles.input}
-        placeholder="Enter Aadhar last 4 digits"
-      />
-          <Button
+          <TextInput
+            value={lastFourDigits}
+            onChangeText={setLastFourDigits}
+            keyboardType="numeric"
+            maxLength={4}
+            style={styles.input}
+            placeholder="Enter Aadhar last 4 digits"
+          />
+             <Button
             title="Proceed"
             onPress={handleSubmit}
           />
+        </>
+      )}
+       
         </>
       )}
       {loading && (
