@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Button, Text, StyleSheet, Alert } from 'react-native';
+import { View, Button, Text, StyleSheet, Alert, Platform } from 'react-native';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 
@@ -7,9 +7,6 @@ export default function AadharScanner({ onScan }) {
   const [hasPermission, setHasPermission] = useState(false);
   const cameraRef = useRef(null);
   const device = useCameraDevice('back');
-//   useEffect(() => {
-//     console.log('Selected Camera Device:', device);
-//   }, [device]);
 
   useEffect(() => {
     const requestPermissions = async () => {
@@ -25,19 +22,31 @@ export default function AadharScanner({ onScan }) {
     try {
       if (cameraRef.current) {
         console.log('Camera ref is initialized');
-  
+        
+        // Configuring the camera settings (You can adjust these based on your needs)
         const photo = await cameraRef.current.takePhoto({
           qualityPrioritization: 'quality',
         });
-  
+
         if (photo && photo.path) {
           console.log('Photo path:', photo.path);
-          const result = await TextRecognition.recognize(photo.path);
+
+          // Convert the path to URI (important for Android)
+          let photoUri = photo.path;
+          if (Platform.OS === 'android') {
+            photoUri = `file://${photo.path}`;
+          }
+
+          console.log('Photo URI:', photoUri);
+
+          // Perform text recognition
+          const result = await TextRecognition.recognize(photoUri);
           const recognizedText = result.text;
-  
+
+          // Extract data from recognized text
           const name = extractName(recognizedText);
           const lastFourDigits = extractLastFourDigits(recognizedText);
-  
+
           if (name && lastFourDigits) {
             onScan({ name, lastFourDigits });
           } else {
@@ -55,8 +64,6 @@ export default function AadharScanner({ onScan }) {
       Alert.alert('An error occurred while scanning. Please try again.');
     }
   };
-  
-  
 
   const extractName = (text) => {
     const namePattern = /^[A-Z\s]+$/;
@@ -89,6 +96,9 @@ export default function AadharScanner({ onScan }) {
         device={device}
         isActive={true}
         photo={true}
+        videoStabilizationMode="auto"
+        hdr={false}
+        lowLightBoost={true}
       />
       <Button title="Capture" onPress={handleCapture} />
     </View>
