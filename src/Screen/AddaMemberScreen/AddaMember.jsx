@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import AadharScanner from '../../components/AadharScanner';
+import { UserLocationContext } from '../../contexts/UserlocationContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
 
 
 export default function AddaMember({ navigation }) {
@@ -19,20 +22,53 @@ export default function AddaMember({ navigation }) {
   const [documentQuestions, setDocumentQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [lastFourDigits, setLastFourDigits] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [manualEntry, setManualEntry] = useState(false);
+  const { location } = useContext(UserLocationContext);
+  const [dob, setDob] = useState('');
+  const [tempDob, setTempDob] = useState(dob); // Temporary state for DOB
+
 
 
   useEffect(() => {
     console.log('Program Data: ', programData);
+    console.log('Location: ', location);
+
   }, [programData]);
+
+  const handleDateChange = (event, selectedDate) => {
+    setShowDatePicker(false); // Hide the date picker after selection
+  
+    if (event.type === 'set' && selectedDate) {
+      // If the user pressed "OK", update both tempDob and dob
+      const day = selectedDate.getDate().toString().padStart(2, '0');
+      const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+      const year = selectedDate.getFullYear();
+      const formattedDate = `${day}/${month}/${year}`;
+      setTempDob(formattedDate); // Set the temporary DOB
+      setDob(formattedDate); // Update the actual DOB state
+    } else if (event.type === 'dismissed') {
+      // If the user pressed "Cancel", do nothing, and restore tempDob
+      setDob(tempDob); // Restore to last selected date
+    }
+  };
+
+  const showDatepicker = () => {
+    setTempDob(dob); // Save the current DOB before showing the picker
+    setShowDatePicker(true);
+  };
+
 
   
   const handleScanComplete = (data) => {
-    setShowScanner(false);
+   
     if (data) {
       setName(data.name);
       setLastFourDigits(data.lastFourDigits);
+      setDob(data.dob); // Set DOB value
+      setShowScanner(false);
+      setManualEntry(false);
     }
   };
 
@@ -360,35 +396,78 @@ export default function AddaMember({ navigation }) {
           return { id: optionId, name: option ? option.name : 'Unknown' };
         })
       }));
-
+      let normalizedName = name.toLowerCase();
       const membersRef = firestore().collection('Members');
       const memberQuery = membersRef
         .where('AadharlastFourDigits', '==', lastFourDigits)
-        .where('name', '==', name)
+        .where('normalizedName', '==', normalizedName)
         .where('ProgramId', '==', userData.ProgramId);
       const memberSnapshot = await memberQuery.get();
-
+  
       if (!memberSnapshot.empty) {
-        const memberDoc = memberSnapshot.docs[0];
-        await memberDoc.ref.update({
-          QuestionAnswers: formattedAnswers,
-          eligibleSchemes: eligibleSchemes,
-          eligibleDocuments: eligibleDocuments
-        });
-        Alert.alert('Data updated successfully!');
-        navigation.navigate('EligibleDocuments&Schemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
+        // Alert user that member exists and ask whether to update or create a new one
+        Alert.alert(
+          'Member already Exists',
+          'Do you want to update the details?',
+          [
+            {
+              text: 'Create New',
+              onPress: async () => {
+                // If the user chooses to create a new member
+                await membersRef.add({
+                  name,
+                  normalizedName: name.toLowerCase(),
+                  phoneNumber,
+                  dob,
+                  AadharlastFourDigits: lastFourDigits,
+                  ProgramId: userData.ProgramId,
+                  QuestionAnswers: formattedAnswers,
+                  eligibleSchemes: eligibleSchemes,
+                  eligibleDocuments: eligibleDocuments,
+                  location: location,
+                });
+                navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
+                Alert.alert('Data saved successfully!');
+              },
+              style: 'cancel',
+            },
+            {
+              text: 'Update',
+              onPress: async () => {
+                // If the user chooses to update the existing member
+                const memberDoc = memberSnapshot.docs[0];
+                await memberDoc.ref.update({
+                  QuestionAnswers: formattedAnswers,
+                  eligibleSchemes: eligibleSchemes,
+                  eligibleDocuments: eligibleDocuments,
+                  phoneNumber: phoneNumber,
+                  dob: dob,
+                  location: location,
+                });
+                Alert.alert('Data updated successfully!');
+                navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
+              },
+            },
+          ],
+          { cancelable: true }
+        );
       } else {
+        // Create a new member if none exists
         if (name && phoneNumber && userData.ProgramId && answers) {
           await membersRef.add({
             name,
+            normalizedName: name.toLowerCase(),
             phoneNumber,
-            AadharlastFourDigits:lastFourDigits,
+            dob,
+            AadharlastFourDigits: lastFourDigits,
             ProgramId: userData.ProgramId,
             QuestionAnswers: formattedAnswers,
             eligibleSchemes: eligibleSchemes,
-            eligibleDocuments: eligibleDocuments
+            eligibleDocuments: eligibleDocuments,
+            location: location,
           });
           Alert.alert('Data saved successfully!');
+          navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
         } else {
           Alert.alert('Missing required fields. Please fill in all the details.');
         }
@@ -435,6 +514,26 @@ export default function AddaMember({ navigation }) {
              placeholderTextColor="gray"
              editable={manualEntry} // Disable unless manualEntry is true
            />
+               <Text style={styles.label}>Select Date of Birth</Text>
+               <TouchableOpacity
+            style={styles.input} // Reusing input style for consistency
+            onPress={showDatepicker}
+            disabled={!manualEntry} // Disable unless manualEntry is true
+          >
+            <Text style={{ color: dob ? '#000' : 'gray' }}>
+              {dob || 'Select DOB'}
+            </Text>
+          </TouchableOpacity>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={dob ? new Date(dob.split('/').reverse().join('-')) : new Date()} // Use last selected date or current date
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+              maximumDate={new Date()} // Optional: Prevent future dates
+            />
+          )}
            <TextInput
              placeholder="Phone Number"
              value={phoneNumber}
@@ -526,15 +625,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: 'grey',
-    padding: 12,
-    borderRadius: 5,
-    marginBottom: 16,
-    color: 'black',
-    backgroundColor: '#f0f0f0',
-  },
+
   loaderContainer: {
     position: 'absolute',
     top: 0,
@@ -641,6 +732,25 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },  label: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 8,
+  }, dateButton: {
+    backgroundColor: '#6200ee',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginBottom: 16,
+  },  input: {
+    width: '100%',
+    padding: 10,
+    marginVertical: 10,
+    borderColor: '#CCC',
+    borderWidth: 1,
+    borderRadius: 5,
+    justifyContent: 'center', // Center text vertically in the TouchableOpacity
+    alignItems: 'center',
   },
 
 });

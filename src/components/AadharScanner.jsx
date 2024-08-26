@@ -8,6 +8,7 @@ export default function AadharScanner({ onScan }) {
   const [loading, setLoading] = useState(false); // State to manage the loader
   const cameraRef = useRef(null);
   const device = useCameraDevice('back');
+ 
 
   useEffect(() => {
     const requestPermissions = async () => {
@@ -43,12 +44,16 @@ export default function AadharScanner({ onScan }) {
 
           const result = await TextRecognition.recognize(photoUri);
           const recognizedText = result.text;
+          console.log(recognizedText)
 
           const name = extractName(recognizedText);
           const lastFourDigits = extractLastFourDigits(recognizedText);
+          const dob = extractDOB(recognizedText); // Extract DOB
 
-          if (name && lastFourDigits) {
-            onScan({ name, lastFourDigits });
+          if (name && lastFourDigits ) {
+            onScan({ name, lastFourDigits,dob });
+            
+            
           } else {
             Alert.alert('Failed to scan Aadhar. Please try again.');
           }
@@ -68,17 +73,49 @@ export default function AadharScanner({ onScan }) {
   };
 
   const extractName = (text) => {
-    const namePattern = /^[A-Z\s]+$/;
-    const name = text.split('\n').find(line => namePattern.test(line));
+    // Keywords to exclude from name extraction
+    const excludeKeywords = ['GOVERNMENT OF INDIA', 'DOB', 'MALE', 'FEMALE', 'FEMALE', 'INDIA', 'AADHAAR', 'UIDAI'];
+  
+    // Regex to match lines that contain names (allow both upper and lowercase)
+    const namePattern = /^[a-zA-Z\s]+$/;
+  
+    // Split text into lines and find a line matching the name pattern
+    const name = text
+      .split('\n')
+      .map(line => line.trim()) // Trim spaces from each line
+      .find(line => {
+        const isName = namePattern.test(line) && !excludeKeywords.some(keyword => line.toUpperCase().includes(keyword));
+        return isName;
+      });
+  
     return name || null;
   };
-
+  
   const extractLastFourDigits = (text) => {
     const digitsPattern = /\d{4}\s\d{4}\s\d{4}/;
     const match = text.match(digitsPattern);
     if (match) {
       return match[0].split(' ')[2];
     }
+    return null;
+  };
+  const extractDOB = (text) => {
+    const dobPattern = /(?:DOB[:\s]*)(\d{2}\/\d{2}\/\d{4})/i; // Regex to match DOB format
+    const match = text.match(dobPattern);
+    
+    if (match && match[1]) {
+      // Use the matched date string to create a Date object
+      const dateParts = match[1].split('/');
+      const day = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1; // Months are 0-based in JavaScript
+      const year = parseInt(dateParts[2], 10);
+  
+      const dob = new Date(year, month, day);
+  
+      // Return the formatted date string
+      return dob.toLocaleDateString('en-GB'); // dd/mm/yyyy format
+    }
+    
     return null;
   };
 
@@ -99,8 +136,8 @@ export default function AadharScanner({ onScan }) {
         isActive={true}
         photo={true}
         videoStabilizationMode="auto"
-         //hdr={false}
-         //lowLightBoost={true}
+         hdr={true}
+         lowLightBoost={true}
       />
       {loading ? (
         <ActivityIndicator size="large" color="#0000ff" /> // Loader while capturing

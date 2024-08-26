@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,9 @@ import services from '../../utils/services';
 import { useSelector } from 'react-redux';
 import { launchCamera } from 'react-native-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
+import AadharScanner from '../../components/AadharScanner';
+import { UserLocationContext } from '../../contexts/UserlocationContext';
+
 
 
 
@@ -41,7 +44,7 @@ const PostScreen = () => {
   const [fullName, setFullName] = useState('');
   const [phoneNo, setPhoneNo] = useState('');
   const [gender, setGender] = useState('Male');
-  const [dob, setDob] = useState(new Date());
+  const [dob, setDob] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [priority, setPriority] = useState('High');
   const [loading, setLoading] = useState(false);
@@ -53,6 +56,44 @@ const PostScreen = () => {
   const ProgramId = userData?.ProgramId;
   const [state,setState] = useState('Delhi')
   const [city,setCity] = useState('')
+  const [lastFourDigits, setLastFourDigits] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+  const [manualEntry, setManualEntry] = useState(false);
+  const { location } = useContext(UserLocationContext);
+  const [tempDob, setTempDob] = useState(dob); 
+ 
+  const handleScanComplete = (data) => {
+    if (data) {
+      setFullName(data.name); // Set full name using setFullName
+      setLastFourDigits(data.lastFourDigits);
+      setDob(data.dob); // Set DOB value
+      setShowScanner(false);
+      setManualEntry(false);
+    }
+  };
+  
+
+  const handleDateChange = (event, selectedDate) => {
+    setShowDatePicker(false); // Hide the date picker after selection
+  
+    if (event.type === 'set' && selectedDate) {
+      // If the user pressed "OK", update both tempDob and dob
+      const day = selectedDate.getDate().toString().padStart(2, '0');
+      const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+      const year = selectedDate.getFullYear();
+      const formattedDate = `${day}/${month}/${year}`;
+      setTempDob(formattedDate); // Set the temporary DOB
+      setDob(formattedDate); // Update the actual DOB state
+    } else if (event.type === 'dismissed') {
+      // If the user pressed "Cancel", do nothing, and restore tempDob
+      setDob(tempDob); // Restore to last selected date
+    }
+  };
+
+  const showDatepicker = () => {
+    setTempDob(dob); // Save the current DOB before showing the picker
+    setShowDatePicker(true);
+  };
   
 
   const hasPermission = (permission) => {
@@ -284,14 +325,16 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
         status: 'Open',
         subject: subject,
         updated_on: createdOn,
-        user_email: userEmail,
-        user_id: userId,
+        createdBy_email: userEmail,
+        createdBy_userId: userId,
         fullName: fullName,
         phoneNo: phoneNo,
         gender: gender,
-        dob: dob.toDateString(),
+        dob: dob,
         state:state,
         city:city,
+        location:location,
+        AadharlastFourDigits:lastFourDigits,
         category_id: categories.find(cat => cat.categoryName === category)?.id || '',
         applicationMethod: applicationMethod,
         
@@ -300,12 +343,13 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
       if (ProgramId) {
         ticketData.ProgramId = ProgramId;
       }
-  
+      
+      let normalizedName = fullName.toLowerCase();
       const ticketRef = await firestore().collection('Tickets').add(ticketData);
      
       // Check if a member with the same name and phone number exists
       const membersRef = await firestore().collection('Members');
-      const memberQuery = membersRef.where('name', '==', fullName).where('phoneNumber', '==', phoneNo).where('ProgramId', '==', userData.ProgramId);
+      const memberQuery = membersRef.where('normalizedName', '==', normalizedName).where('AadharlastFourDigits', '==', lastFourDigits).where('ProgramId', '==', userData.ProgramId);
       const memberSnapshot = await memberQuery.get();
 
       if (!memberSnapshot.empty) {
@@ -318,9 +362,13 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
           // Member does not exist, create a new member document
           await membersRef.add({
               name: fullName,
+              normalizedName,
+              dob:dob,
+              location:location,
               phoneNumber: phoneNo,
               TicketId: [ticketRef.id],
               ProgramId: userData.ProgramId,
+              AadharlastFourDigits:lastFourDigits
 
           });
       }
@@ -368,23 +416,15 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
     setSubject('');
     setDescription('');
     setGender('Male');
-    setDob(new Date());
-    setPriority('High');
+    setDob('');
+    setPriority('Medium');
     setDocuments([]);
     setFullName('');
     setPhoneNo('');
+    
+    
   };
   
-
-  const showDatepicker = () => {
-    setShowDatePicker(true);
-  };
-
-  const onDateChange = (event, selectedDate) => {
-    const currentDate = selectedDate || dob;
-    setShowDatePicker(false);
-    setDob(currentDate);
-  };
 
   const handleSearch = (text) => {
     setSearchText(text);
@@ -426,6 +466,33 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
         <Text style={styles.title}>Grievance Redressal Form</Text>
+        
+        {showScanner ? (
+  <AadharScanner onScan={handleScanComplete} />
+) : (
+  <View style={styles.container}>
+    <TouchableOpacity style={styles.button} onPress={() => setShowScanner(true)}>
+      <Text style={styles.buttonText}>SCAN AADHAR</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.button}
+      onPress={() =>
+        Alert.alert(
+          'Manual Entry',
+          'Do you want to enter information manually?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'OK', onPress: () => setManualEntry(true) },
+          ],
+          { cancelable: true }
+        )
+      }
+    >
+      <Text style={styles.buttonText}>ENTER MANUALLY</Text>
+    </TouchableOpacity>
+
+
 
         <Text style={styles.label}>Select Category</Text>
         <TouchableOpacity style={styles.input} onPress={() => setModalVisible(true)}>
@@ -495,7 +562,17 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
           value={fullName}
           onChangeText={setFullName}
           placeholderTextColor="gray"
+          editable={manualEntry} 
         />
+            <TextInput
+             value={lastFourDigits}
+             onChangeText={setLastFourDigits}
+             keyboardType="numeric"
+             maxLength={4}
+             style={styles.input}
+             placeholder="Enter Aadhar last 4 digits"
+             editable={manualEntry} // Disable unless manualEntry is true
+           />
         <Text style={styles.label}>Phone Number</Text>
         <TextInput
           placeholder="Phone Number"
@@ -518,18 +595,25 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
         </Picker>
 
         <Text style={styles.label}>Select Date of Birth</Text>
-        <TouchableOpacity onPress={showDatepicker} style={styles.dateButton}>
-          <Text style={styles.buttonText}>Selected Date: {dob.toDateString()}</Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={dob}
-            mode="date"
-            display="default"
-            onChange={onDateChange}
-          />
-        )}
+               <TouchableOpacity
+            style={styles.input} // Reusing input style for consistency
+            onPress={showDatepicker}
+            disabled={!manualEntry} // Disable unless manualEntry is true
+          >
+            <Text style={{ color: dob ? '#000' : 'gray' }}>
+              {dob || 'Select DOB'}
+            </Text>
+          </TouchableOpacity>
 
+          {showDatePicker && (
+            <DateTimePicker
+              value={dob ? new Date(dob.split('/').reverse().join('-')) : new Date()}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+              maximumDate={new Date()} // Optional: Prevent future dates
+            />
+          )}
      <Text style={styles.label}>Select State</Text>
         <Picker
           selectedValue={state}
@@ -631,6 +715,9 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
             <Text style={styles.buttonText}>Submit</Text>
           )}
         </TouchableOpacity>
+        
+      </View>
+      )}
       </View>
     </ScrollView>
   );
@@ -669,7 +756,7 @@ const styles = StyleSheet.create({
     color: 'black',
     backgroundColor: '#f0f0f0',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center', // Center text vertically in the TouchableOpacity
     alignItems: 'center',
   },
   inputText: {

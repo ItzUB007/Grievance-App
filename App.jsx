@@ -9,6 +9,8 @@ import { AuthProvider } from "./src/contexts/AuthContext.js";
 import messaging from '@react-native-firebase/messaging';
 import { PermissionsAndroid, Platform, Alert } from 'react-native';
 import PushNotification from 'react-native-push-notification';
+import Geolocation from 'react-native-geolocation-service';
+import { UserLocationContext } from './src/contexts/UserlocationContext.js';
 
 // Create notification channel
 const createChannel = () => {
@@ -33,6 +35,7 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
 const App = () => {
   const [user, setUser] = useState();
   const [fcmToken, setFcmToken] = useState(null);
+  const [location, setLocation] = useState(null);
 
   const onAuthStateSave = (user) => setUser(user);
 
@@ -46,9 +49,49 @@ const App = () => {
     }
   };
 
+  const requestLocationPermission = async () => {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        {
+          title: 'Location Permission',
+          message: 'This app needs access to your location to show your current location on the map.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        },
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        console.log('Location permission granted');
+        getLocation();
+      } else {
+        console.log('Location permission denied');
+        Alert.alert('Location permission denied');
+      }
+    } catch (err) {
+      console.warn(err);
+    }
+  };
+
+  const getLocation = () => {
+    Geolocation.getCurrentPosition(
+      position => {
+        const { latitude, longitude } = position.coords;
+        setLocation({ latitude, longitude });
+        console.log('User location:', latitude, longitude);
+      },
+      error => {
+        console.error('Location error:', error);
+        Alert.alert('Error', 'Unable to retrieve your location.');
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+  };
+
   useEffect(() => {
     if (Platform.OS === 'android') {
       PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+      requestLocationPermission(); // Ask for location permission on app start
     }
     const subscriber = auth().onAuthStateChanged(onAuthStateSave);
     createChannel();
@@ -79,9 +122,12 @@ const App = () => {
   return (
     <Provider store={store}>
       <AuthProvider>
+      <UserLocationContext.Provider 
+    value={{location,setLocation}}>
         <NavigationContainer>
           {user && user.emailVerified ? <TabNavigations /> : <StackNavigator />}
         </NavigationContainer>
+        </UserLocationContext.Provider>
       </AuthProvider>
     </Provider>
   );
