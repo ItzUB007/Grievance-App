@@ -202,18 +202,70 @@ export default function AddaMember({ navigation }) {
       Alert.alert('Please enter both name and phone number.');
       return;
     }
-
+  
     setLoading(true);
     try {
-      await fetchSchemesAndDocuments(programData.schemes, programData.documents);
-      setShowModal(true);
+      const membersRef = firestore().collection('Members');
+      const normalizedName = name.toLowerCase();
+      const memberQuery = membersRef
+        .where('AadharlastFourDigits', '==', lastFourDigits)
+        .where('normalizedName', '==', normalizedName)
+        .where('ProgramId', '==', userData.ProgramId);
+      const memberSnapshot = await memberQuery.get();
+  
+      if (!memberSnapshot.empty) {
+        // Member already exists, show alert with options
+        Alert.alert(
+          'Member already exists',
+          'Do you want to update the details?',
+          [
+            {
+              text: 'Cancel',
+              onPress: () => {
+                // Reset form on cancel
+                setName('');
+                setPhoneNumber('');
+                setLastFourDigits('');
+                setDob('');
+                setAnswers({});
+                setQuestions([]);
+                setSchemes([]);
+                setDocuments([]);
+                setSchemeQuestions([]);
+                setDocumentQuestions([]);
+                setCurrentQuestionIndex(0);
+                setManualEntry(false);
+                setShowScanner(false);
+                setShowModal(false);
+                setTempDob('');
+                Alert.alert('Form has been reset.');
+              },
+              style: 'cancel',
+            },
+            {
+              text: 'Update',
+              onPress: async () => {
+                // Proceed as usual to fetch schemes and documents
+                await fetchSchemesAndDocuments(programData.schemes, programData.documents);
+                setShowModal(true);
+              },
+            },
+          ],
+          { cancelable: true }
+        );
+      } else {
+        // If member does not exist, proceed as usual
+        await fetchSchemesAndDocuments(programData.schemes, programData.documents);
+        setShowModal(true);
+      }
     } catch (error) {
-      console.error('Error fetching schemes and documents: ', error);
-      Alert.alert('Error fetching schemes and documents. Please try again.');
+      console.error('Error checking member existence or fetching schemes and documents: ', error);
+      Alert.alert('Error checking member existence or fetching schemes and documents. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+  
 
   const checkEligibility = async () => {
     try {
@@ -403,71 +455,35 @@ export default function AddaMember({ navigation }) {
         .where('normalizedName', '==', normalizedName)
         .where('ProgramId', '==', userData.ProgramId);
       const memberSnapshot = await memberQuery.get();
-  
+
       if (!memberSnapshot.empty) {
-        // Alert user that member exists and ask whether to update or create a new one
-        Alert.alert(
-          'Member already Exists',
-          'Do you want to update the details?',
-          [
-            {
-              text: 'Create New',
-              onPress: async () => {
-                // If the user chooses to create a new member
-                await membersRef.add({
-                  name,
-                  normalizedName: name.toLowerCase(),
-                  phoneNumber,
-                  dob,
-                  AadharlastFourDigits: lastFourDigits,
-                  ProgramId: userData.ProgramId,
-                  QuestionAnswers: formattedAnswers,
-                  eligibleSchemes: eligibleSchemes,
-                  eligibleDocuments: eligibleDocuments,
-                  location: location,
-                });
-                navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
-                Alert.alert('Data saved successfully!');
-              },
-              style: 'cancel',
-            },
-            {
-              text: 'Update',
-              onPress: async () => {
-                // If the user chooses to update the existing member
-                const memberDoc = memberSnapshot.docs[0];
-                await memberDoc.ref.update({
-                  QuestionAnswers: formattedAnswers,
-                  eligibleSchemes: eligibleSchemes,
-                  eligibleDocuments: eligibleDocuments,
-                  phoneNumber: phoneNumber,
-                  dob: dob,
-                  location: location,
-                });
-                Alert.alert('Data updated successfully!');
-                navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
-              },
-            },
-          ],
-          { cancelable: true }
-        );
+        const memberDoc = memberSnapshot.docs[0];
+        await memberDoc.ref.update({
+          QuestionAnswers: formattedAnswers,
+          eligibleSchemes: eligibleSchemes,
+          eligibleDocuments: eligibleDocuments,
+          phoneNumber:phoneNumber,
+          dob:dob,
+          location:location,
+        });
+       
+        navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
+        Alert.alert('Data updated successfully!');
       } else {
-        // Create a new member if none exists
         if (name && phoneNumber && userData.ProgramId && answers) {
           await membersRef.add({
             name,
             normalizedName: name.toLowerCase(),
             phoneNumber,
             dob,
-            AadharlastFourDigits: lastFourDigits,
+            AadharlastFourDigits:lastFourDigits,
             ProgramId: userData.ProgramId,
             QuestionAnswers: formattedAnswers,
             eligibleSchemes: eligibleSchemes,
             eligibleDocuments: eligibleDocuments,
-            location: location,
+            location:location,
           });
           Alert.alert('Data saved successfully!');
-          navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
         } else {
           Alert.alert('Missing required fields. Please fill in all the details.');
         }
@@ -476,7 +492,6 @@ export default function AddaMember({ navigation }) {
       console.error('Error checking eligibility and saving data: ', error);
     }
   };
-
   return (
     <View style={styles.container}>
       {questions.length === 0 && (
