@@ -29,13 +29,17 @@ export default function AddaMember({ navigation }) {
   const [dob, setDob] = useState('');
   const [tempDob, setTempDob] = useState(dob); // Temporary state for DOB
 
-
-
   useEffect(() => {
-    console.log('Program Data: ', programData);
-    console.log('Location: ', location);
+    console.log('Current answers state:', answers);
+  }, [answers]);
+  
 
-  }, [programData]);
+
+  // useEffect(() => {
+  //   console.log('Program Data: ', programData);
+  //   console.log('Location: ', location);
+
+  // }, [programData]);
 
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(false); // Hide the date picker after selection
@@ -193,7 +197,7 @@ export default function AddaMember({ navigation }) {
   const handleNumberInput = (questionId, value) => {
     setAnswers(prevAnswers => ({
       ...prevAnswers,
-      [questionId]: value
+      [questionId]: [value] // Storing value as an array to be consistent with other answer types
     }));
   };
 
@@ -214,7 +218,6 @@ export default function AddaMember({ navigation }) {
       const memberSnapshot = await memberQuery.get();
   
       if (!memberSnapshot.empty) {
-        // Member already exists, show alert with options
         Alert.alert(
           'Member already exists',
           'Do you want to update the details?',
@@ -246,37 +249,49 @@ export default function AddaMember({ navigation }) {
               text: 'Update',
               onPress: async () => {
                 setLoading(true); // Show loader while fetching data
-                // Fetch the existing answers to pre-fill
-                const memberDoc = memberSnapshot.docs[0];
-                const existingAnswers = memberDoc.data().QuestionAnswers || [];
-                const prefilledAnswers = {};
-                existingAnswers.forEach(answer => {
-                  if (answer.selectedOptions) {
-                    prefilledAnswers[answer.id] = answer.selectedOptions.map(option => option.id);
-                  }
-                });
-                setAnswers(prefilledAnswers);
+                try {
+                  // Fetch the existing answers to pre-fill
+                  const memberDoc = memberSnapshot.docs[0];
+                  const existingAnswers = memberDoc.data().QuestionAnswers || [];
+                  const prefilledAnswers = {};
+                  existingAnswers.forEach(answer => {
+                    // Check if answer is a number-type question or MCQ
+                    if (Array.isArray(answer.selectedOptions) && answer.selectedOptions.length > 0) {
+                      const isNumber = !isNaN(answer.selectedOptions[0]);
+                      prefilledAnswers[answer.id] = isNumber
+                        ? answer.selectedOptions // Directly set the answer
+                        : answer.selectedOptions.map(option => option.id);
+                    }
+                  });
+                  setAnswers(prefilledAnswers);
   
-                // Proceed to fetch schemes and documents
-                await fetchSchemesAndDocuments(programData.schemes, programData.documents);
-                setShowModal(true);
+                  // Proceed to fetch schemes and documents
+                  await fetchSchemesAndDocuments(programData.schemes, programData.documents);
+                  setShowModal(true);
+                } catch (fetchError) {
+                  console.error('Error fetching data for update:', fetchError);
+                  Alert.alert('Error fetching data. Please try again.');
+                } finally {
+                  setLoading(false); // Stop loading after fetching
+                }
               },
             },
           ],
           { cancelable: true }
         );
       } else {
-        // If member does not exist, proceed as usual
         await fetchSchemesAndDocuments(programData.schemes, programData.documents);
         setShowModal(true);
       }
     } catch (error) {
       console.error('Error checking member existence or fetching schemes and documents: ', error);
       Alert.alert('Error checking member existence or fetching schemes and documents. Please try again.');
+      setLoading(false);
     } finally {
       setLoading(false);
     }
   };
+  
   
   
 
@@ -288,28 +303,28 @@ export default function AddaMember({ navigation }) {
         const commonItems = arr2?.filter(item => set1.has(item));
         return commonItems?.length > 0;
       }
-
+  
       let eligibleSchemes = [];
       let eligibleDocuments = [];
       let eligibleSchemesDetails = [];
       let eligibleDocumentsDetails = [];
-
+  
       // Check eligibility for schemes
       schemes.forEach((scheme) => {
         let bool = true; // Reset bool for each scheme
-
+  
         if (scheme.schemeQuestions) {
           scheme.schemeQuestions.forEach((SQ) => {
             let existingQuestion = answers[SQ.question];
             console.log('existingQuestion-', existingQuestion);
             console.log('outer', SQ.option?.Operation);
-
+  
             if (SQ.option?.Operation) {
               console.log('inside', SQ.option.Operation);
-
+  
               const answerValue = Number(existingQuestion);
               const inputValue = Number(SQ.option.inputValue[0]);
-
+  
               switch (SQ.option.Operation) {
                 case '==':
                   if (inputValue !== answerValue) {
@@ -364,29 +379,29 @@ export default function AddaMember({ navigation }) {
             }
           });
         }
-
+  
         if (bool) {
           eligibleSchemes.push({ id: scheme.id, name: scheme.Name });
           eligibleSchemesDetails.push(scheme);
         }
       });
-
+  
       // Check eligibility for documents
       documents.forEach((document) => {
         let bool = true; // Reset bool for each document
-          console.log('Document-',document)
+        console.log('Document-', document);
         if (document.schemeQuestions) {
           document.schemeQuestions.forEach((DQ) => {
             let existingQuestion = answers[DQ.question];
             console.log('existingQuestion-', existingQuestion);
             console.log('outer', DQ.option?.Operation);
-
+  
             if (DQ.option?.Operation) {
               console.log('inside', DQ.option.Operation);
-
+  
               const answerValue = Number(existingQuestion);
               const inputValue = Number(DQ.option.inputValue[0]);
-
+  
               switch (DQ.option.Operation) {
                 case '==':
                   if (inputValue !== answerValue) {
@@ -441,26 +456,28 @@ export default function AddaMember({ navigation }) {
             }
           });
         }
-
+  
         if (bool) {
           eligibleDocuments.push({ id: document.id, name: document.Name });
           eligibleDocumentsDetails.push(document);
-         
         }
       });
-
+  
       console.log("eligibleSchemes", eligibleSchemes);
       console.log("eligibleDocuments", eligibleDocuments);
-      
-
+  
+      // Flattening the structure to avoid nested arrays
       const formattedAnswers = questions.map(q => ({
         id: q.id,
         conceptName: q.ConceptName,
-        selectedOptions: q.ConceptType === 'Number' ? [answers[q.id]] : (answers[q.id] || []).map(optionId => {
-          const option = q.options.find(o => o.id === optionId);
-          return { id: optionId, name: option ? option.name : 'Unknown' };
-        })
+        selectedOptions: q.ConceptType === 'Number'
+          ? answers[q.id] // For number type, use the value directly
+          : (answers[q.id] || []).map(optionId => {
+            const option = q.options.find(o => o.id === optionId);
+            return { id: optionId, name: option ? option.name : 'Unknown' };
+          })
       }));
+  
       let normalizedName = name.toLowerCase();
       const membersRef = firestore().collection('Members');
       const memberQuery = membersRef
@@ -468,18 +485,18 @@ export default function AddaMember({ navigation }) {
         .where('normalizedName', '==', normalizedName)
         .where('ProgramId', '==', userData.ProgramId);
       const memberSnapshot = await memberQuery.get();
-
+  
       if (!memberSnapshot.empty) {
         const memberDoc = memberSnapshot.docs[0];
         await memberDoc.ref.update({
           QuestionAnswers: formattedAnswers,
           eligibleSchemes: eligibleSchemes,
           eligibleDocuments: eligibleDocuments,
-          phoneNumber:phoneNumber,
-          dob:dob,
-          location:location,
+          phoneNumber: phoneNumber,
+          dob: dob,
+          location: location,
         });
-       
+  
         navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
         Alert.alert('Data updated successfully!');
       } else {
@@ -489,13 +506,14 @@ export default function AddaMember({ navigation }) {
             normalizedName: name.toLowerCase(),
             phoneNumber,
             dob,
-            AadharlastFourDigits:lastFourDigits,
+            AadharlastFourDigits: lastFourDigits,
             ProgramId: userData.ProgramId,
             QuestionAnswers: formattedAnswers,
             eligibleSchemes: eligibleSchemes,
             eligibleDocuments: eligibleDocuments,
-            location:location,
+            location: location,
           });
+          navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
           Alert.alert('Data saved successfully!');
         } else {
           Alert.alert('Missing required fields. Please fill in all the details.');
@@ -505,6 +523,7 @@ export default function AddaMember({ navigation }) {
       console.error('Error checking eligibility and saving data: ', error);
     }
   };
+  
   return (
     <View style={styles.container}>
       {questions.length === 0 && (
@@ -601,7 +620,11 @@ export default function AddaMember({ navigation }) {
         <TextInput
           style={styles.numberInput}
           keyboardType="numeric"
-          value={answers[questions[currentQuestionIndex].id] || ''}
+          value={
+            answers[questions[currentQuestionIndex].id] 
+              ? answers[questions[currentQuestionIndex].id][0] // Directly use the first element for number
+              : '' // Default to an empty string if undefined
+          }
           placeholder="Enter Your Answer"
           onChangeText={(value) => handleNumberInput(questions[currentQuestionIndex].id, value)}
         />
@@ -642,6 +665,10 @@ export default function AddaMember({ navigation }) {
     </View>
   </ScrollView>
 )}
+
+
+
+
 
     </View>
   );
