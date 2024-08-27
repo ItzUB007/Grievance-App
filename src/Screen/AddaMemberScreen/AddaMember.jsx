@@ -471,7 +471,7 @@ export default function AddaMember({ navigation }) {
         id: q.id,
         conceptName: q.ConceptName,
         selectedOptions: q.ConceptType === 'Number'
-          ? answers[q.id] // For number type, use the value directly
+          ?  (answers[q.id] && answers[q.id][0] !== undefined ? [answers[q.id][0]] : ['']) // For number type, use the value directly, default to empty string if undefined// For number type, use the value directly
           : (answers[q.id] || []).map(optionId => {
             const option = q.options.find(o => o.id === optionId);
             return { id: optionId, name: option ? option.name : 'Unknown' };
