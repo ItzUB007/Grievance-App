@@ -245,7 +245,19 @@ export default function AddaMember({ navigation }) {
             {
               text: 'Update',
               onPress: async () => {
-                // Proceed as usual to fetch schemes and documents
+                setLoading(true); // Show loader while fetching data
+                // Fetch the existing answers to pre-fill
+                const memberDoc = memberSnapshot.docs[0];
+                const existingAnswers = memberDoc.data().QuestionAnswers || [];
+                const prefilledAnswers = {};
+                existingAnswers.forEach(answer => {
+                  if (answer.selectedOptions) {
+                    prefilledAnswers[answer.id] = answer.selectedOptions.map(option => option.id);
+                  }
+                });
+                setAnswers(prefilledAnswers);
+  
+                // Proceed to fetch schemes and documents
                 await fetchSchemesAndDocuments(programData.schemes, programData.documents);
                 setShowModal(true);
               },
@@ -265,6 +277,7 @@ export default function AddaMember({ navigation }) {
       setLoading(false);
     }
   };
+  
   
 
   const checkEligibility = async () => {
@@ -580,56 +593,56 @@ export default function AddaMember({ navigation }) {
         </View>
       )}
   
-      {questions.length > 0 && (
-        <ScrollView contentContainerStyle={styles.fullScreenQuestionContainer}>
-          <View style={styles.questionContainer}>
-            <Text style={styles.questionText}>{`${currentQuestionIndex + 1}. ${questions[currentQuestionIndex].ConceptName}`} </Text>
-            {questions[currentQuestionIndex].ConceptType === 'Number' ? (
-              <TextInput
-                style={styles.numberInput}
-                keyboardType="numeric"
-                value={answers[questions[currentQuestionIndex].id] || ''}
-                placeholder='Enter Your Answere'
-                onChangeText={(value) => handleNumberInput(questions[currentQuestionIndex].id, value)}
-              />  
-            ) : (
-              questions[currentQuestionIndex].options.map(option => (
-                <TouchableOpacity
-                  key={option.id}
-                  style={[
-                    styles.optionButton,
-                    answers[questions[currentQuestionIndex].id] && answers[questions[currentQuestionIndex].id].includes(option.id) && styles.selectedOption
-                  ]}
-                  onPress={() => handleAnswerSelect(questions[currentQuestionIndex].id, option.id, questions[currentQuestionIndex].TypeOfMCQ === 'multiple' ? 'multiple' : 'single')}
-                > 
-                  <Text style={styles.optionText}>{option.name}</Text>
-                </TouchableOpacity>
-              ))
-            )}
-          </View>
-  
-          {/* Add Previous and Next buttons */}
-          <View style={styles.navigationButtons}>
-            {currentQuestionIndex > 0 && (
-              <Button
-                title="Previous"
-                onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex - 1)}
-              />
-            )}
-            {currentQuestionIndex < questions.length - 1 ? (
-              <Button
-                title="Next"
-                onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex + 1)}
-              />
-            ) : (
-              <Button
-                title="Submit"
-                onPress={checkEligibility}
-              />
-            )}
-          </View>
-        </ScrollView>
+  {questions.length > 0 && (
+  <ScrollView contentContainerStyle={styles.fullScreenQuestionContainer}>
+    <View style={styles.questionContainer}>
+      <Text style={styles.questionText}>{`${currentQuestionIndex + 1}. ${questions[currentQuestionIndex].ConceptName}`}</Text>
+      {questions[currentQuestionIndex].ConceptType === 'Number' ? (
+        <TextInput
+          style={styles.numberInput}
+          keyboardType="numeric"
+          value={answers[questions[currentQuestionIndex].id] || ''}
+          placeholder="Enter Your Answer"
+          onChangeText={(value) => handleNumberInput(questions[currentQuestionIndex].id, value)}
+        />
+      ) : (
+        questions[currentQuestionIndex].options.map(option => (
+          <TouchableOpacity
+            key={option.id}
+            style={[
+              styles.optionButton,
+              answers[questions[currentQuestionIndex].id] && answers[questions[currentQuestionIndex].id].includes(option.id) && styles.selectedOption
+            ]}
+            onPress={() => handleAnswerSelect(questions[currentQuestionIndex].id, option.id, questions[currentQuestionIndex].TypeOfMCQ === 'multiple' ? 'multiple' : 'single')}
+          >
+            <Text style={styles.optionText}>{option.name}</Text>
+          </TouchableOpacity>
+        ))
       )}
+    </View>
+
+    <View style={styles.navigationButtons}>
+      {currentQuestionIndex > 0 && (
+        <Button
+          title="Previous"
+          onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex - 1)}
+        />
+      )}
+      {currentQuestionIndex < questions.length - 1 ? (
+        <Button
+          title="Next"
+          onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex + 1)}
+        />
+      ) : (
+        <Button
+          title="Submit"
+          onPress={checkEligibility}
+        />
+      )}
+    </View>
+  </ScrollView>
+)}
+
     </View>
   );
   
