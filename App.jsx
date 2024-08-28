@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore'; // Import Firestore
 import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import TabNavigations from './src/Navigations/TabNavigations';
@@ -44,8 +45,24 @@ const App = () => {
       const token = await messaging().getToken();
       setFcmToken(token);
       console.log('FCM Token:', token);
+      return token; // Return the token so it can be used by another function
     } catch (error) {
       console.error(error);
+      return null;
+    }
+  };
+
+  const saveFcmTokenToFirestore = async (uid, token) => {
+    try {
+      await firestore()
+        .collection('users')
+        .doc(uid)
+        .update({
+          fcmToken: token
+        });
+      console.log('FCM token saved successfully!');
+    } catch (error) {
+      console.error('Error saving FCM token to Firestore:', error);
     }
   };
 
@@ -98,6 +115,20 @@ const App = () => {
     return subscriber;
   }, []);
 
+  // New useEffect to handle user change or login
+  useEffect(() => {
+    const handleUserChange = async () => {
+      if (user) {
+        const token = await getDeviceToken(); // Get FCM token
+        if (token) {
+          saveFcmTokenToFirestore(user.uid, token); // Save FCM token if there's a user
+        }
+      }
+    };
+
+    handleUserChange();
+  }, [user]); // Trigger when the user state changes
+
   useEffect(() => {
     getDeviceToken();
 
@@ -122,11 +153,10 @@ const App = () => {
   return (
     <Provider store={store}>
       <AuthProvider>
-      <UserLocationContext.Provider 
-    value={{location,setLocation}}>
-        <NavigationContainer>
-          {user && user.emailVerified ? <TabNavigations /> : <StackNavigator />}
-        </NavigationContainer>
+        <UserLocationContext.Provider value={{location, setLocation}}>
+          <NavigationContainer>
+            {user ? <TabNavigations /> : <StackNavigator />}
+          </NavigationContainer>
         </UserLocationContext.Provider>
       </AuthProvider>
     </Provider>
