@@ -33,6 +33,7 @@ import { UserLocationContext } from '../../contexts/UserlocationContext';
 
 
 
+
 const PostScreen = () => {
   const { currentUser, permissions,userData } = useAuth();
   const [categories, setCategories] = useState([]);

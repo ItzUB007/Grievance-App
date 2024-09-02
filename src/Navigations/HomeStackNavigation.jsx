@@ -13,6 +13,11 @@ import EligibleSchemes from '../Screen/EligibleSchemes/EligibleSchemes';
 import EligibleSchemeDetails from '../Screen/EligibleSchemes/EligibleSchemeDetails';
 import MemberDetails from '../Screen/MemberDetailsScreen/MemberDetails';
 import DocumentDetails from '../Screen/DocumentScreen/DocumentDetails';
+import CreateFamily from '../Screen/FamilyScreen/CreateFamily';
+import ViewFamily from '../Screen/FamilyScreen/ViewFamily';
+import ViewFamilyMembers from '../Screen/FamilyScreen/ViewFamilyMembers';
+import ViewMembers from '../Screen/ViewMembers/ViewMembers';
+import AddMembersToFamily from '../Screen/FamilyScreen/AddMembersToFamily';
 
 const Stack = createStackNavigator();
 
@@ -32,9 +37,14 @@ const HomeStackNavigator = () => {
       <Stack.Screen name="AddaMember" component={AddaMember} />
       <Stack.Screen name="UpdateaMember" component={UpdateaMember} />
       <Stack.Screen name="MemberDetails" component={MemberDetails} />
+      <Stack.Screen name="ViewMembers" component={ViewMembers} />
       <Stack.Screen name="EligibleDocumentSchemes" component={EligibleSchemes} />
       <Stack.Screen name="Scheme Details" component={EligibleSchemeDetails} />
       <Stack.Screen name="Document Details" component={DocumentDetails} />
+      <Stack.Screen name="CreateFamily" component={CreateFamily} />
+      <Stack.Screen name="ViewFamily" component={ViewFamily} />
+      <Stack.Screen name="ViewFamilyMembers" component={ViewFamilyMembers} />
+      <Stack.Screen name="AddMembersToFamily" component={AddMembersToFamily} />
     </Stack.Navigator>
 
   );

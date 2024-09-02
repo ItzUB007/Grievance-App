@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, ScrollView,
-   Modal, ActivityIndicator } from 'react-native';
+   Modal, ActivityIndicator, 
+   TouchableWithoutFeedback,
+   FlatList} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import AadharScanner from '../../components/AadharScanner';
 import { UserLocationContext } from '../../contexts/UserlocationContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
+//import { Picker } from '@react-native-picker/picker';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 
 
@@ -29,40 +33,81 @@ export default function AddaMember({ navigation }) {
   const { location } = useContext(UserLocationContext);
   const [dob, setDob] = useState('');
   const [tempDob, setTempDob] = useState(dob); // Temporary state for DOB
+  const [families, setFamilies] = useState([]);
+  const [filteredFamilies, setFilteredFamilies] = useState([]);
+  const [selectedFamily, setSelectedFamily] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [selectedFamilyId,setSelectedFamilyId] = useState('');
 
   useEffect(() => {
-    console.log('Current answers state:', answers);
-  }, [answers]);
+    const fetchFamilies = async () => {
+      try {
+        const familiesRef = firestore().collection('Family');
+        const familiesSnapshot = await familiesRef
+          .where('ProgramId', '==', userData?.ProgramId)
+          .get();
+  
+        const fetchedFamilies = familiesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+  
+        setFamilies(fetchedFamilies);
+        setFilteredFamilies(fetchedFamilies.slice(0, 5)); // Set initial state to first 5 families
+      } catch (error) {
+        console.error('Error fetching families: ', error);
+      }
+    };
+  
+    fetchFamilies();
+  }, [userData?.ProgramId]);
   
 
+const handleSearch = (text) => {
+  setSearchText(text);
+  if (text) {
+    const filtered = families.filter((family) =>
+      family.FamilyName.toLowerCase().includes(text.toLowerCase())
+    );
+    setFilteredFamilies(filtered);
+  } else {
+    setFilteredFamilies(families.slice(0, 5)); // Show up to 5 families initially
+  }
+};
 
-  // useEffect(() => {
-  //   console.log('Program Data: ', programData);
-  //   console.log('Location: ', location);
 
-  // }, [programData]);
-
-  const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(false); // Hide the date picker after selection
+const handleFamilySelect = (familyName, familyId) => {
+  setSelectedFamily(familyName);
   
-    if (event.type === 'set' && selectedDate) {
-      // If the user pressed "OK", update both tempDob and dob
-      const day = selectedDate.getDate().toString().padStart(2, '0');
-      const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
-      const year = selectedDate.getFullYear();
-      const formattedDate = `${day}/${month}/${year}`;
-      setTempDob(formattedDate); // Set the temporary DOB
-      setDob(formattedDate); // Update the actual DOB state
-    } else if (event.type === 'dismissed') {
-      // If the user pressed "Cancel", do nothing, and restore tempDob
-      setDob(tempDob); // Restore to last selected date
-    }
-  };
+  setSelectedFamilyId(familyId);
+  setModalVisible(false);
+  // Store the family ID to use in submission logic
+};
 
-  const showDatepicker = () => {
-    setTempDob(dob); // Save the current DOB before showing the picker
-    setShowDatePicker(true);
-  };
+
+
+const handleDateChange = (event, selectedDate) => {
+  setShowDatePicker(false); // Hide the date picker after selection
+
+  if (event.type === 'set' && selectedDate) {
+    // If the user pressed "OK", update both tempDob and dob
+    const day = selectedDate.getDate().toString().padStart(2, '0');
+    const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+    const year = selectedDate.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+    setTempDob(formattedDate); // Set the temporary DOB
+    setDob(formattedDate); // Update the actual DOB state
+  } else if (event.type === 'dismissed') {
+    // If the user pressed "Cancel", do nothing, and restore tempDob
+    setDob(tempDob); // Restore to last selected date
+  }
+};
+
+const showDatepicker = () => {
+  setTempDob(dob); // Save the current DOB before showing the picker
+  setShowDatePicker(true);
+};
 
 
   
@@ -215,7 +260,7 @@ export default function AddaMember({ navigation }) {
       const memberQuery = membersRef
         .where('AadharlastFourDigits', '==', lastFourDigits)
         .where('normalizedName', '==', normalizedName)
-        .where('ProgramId', '==', userData.ProgramId);
+        .where('ProgramId', '==', userData?.ProgramId);
       const memberSnapshot = await memberQuery.get();
   
       if (!memberSnapshot.empty) {
@@ -298,9 +343,14 @@ export default function AddaMember({ navigation }) {
 
   const checkEligibility = async () => {
     try {
+      let newMemberData = {
+        aadhar: lastFourDigits,
+        phone: phoneNumber,
+        name: name,
+      };
+  
       function haveCommonItems(arr1, arr2) {
         const set1 = new Set(arr1);
-        console.log(arr1, arr2);
         const commonItems = arr2?.filter(item => set1.has(item));
         return commonItems?.length > 0;
       }
@@ -317,66 +367,39 @@ export default function AddaMember({ navigation }) {
         if (scheme.schemeQuestions) {
           scheme.schemeQuestions.forEach((SQ) => {
             let existingQuestion = answers[SQ.question];
-            console.log('existingQuestion-', existingQuestion);
-            console.log('outer', SQ.option?.Operation);
   
             if (SQ.option?.Operation) {
-              console.log('inside', SQ.option.Operation);
-  
               const answerValue = Number(existingQuestion);
               const inputValue = Number(SQ.option.inputValue[0]);
   
               switch (SQ.option.Operation) {
                 case '==':
-                  if (inputValue !== answerValue) {
-                    bool = false;
-                    console.log('Condition is checking == & answer is not correct');
-                  }
+                  if (inputValue !== answerValue) bool = false;
                   break;
                 case '!=':
-                  if (inputValue === answerValue) {
-                    bool = false;
-                    console.log('Condition is checking != & answer is not correct');
-                  }
+                  if (inputValue === answerValue) bool = false;
                   break;
                 case '>':
-                  if (answerValue <= inputValue) {
-                    bool = false;
-                    console.log('Condition is checking > & answer is not correct');
-                  }
+                  if (answerValue <= inputValue) bool = false;
                   break;
                 case '<':
-                  if (answerValue >= inputValue) {
-                    bool = false;
-                    console.log('Condition is checking < & answer is not correct');
-                  }
+                  if (answerValue >= inputValue) bool = false;
                   break;
                 case '>=':
-                  if (answerValue < inputValue) {
-                    bool = false;
-                    console.log('Condition is checking >= & answer is not correct');
-                  }
+                  if (answerValue < inputValue) bool = false;
                   break;
                 case '<=':
-                  if (answerValue > inputValue) {
-                    bool = false;
-                    console.log('Condition is checking <= & answer is not correct');
-                  }
+                  if (answerValue > inputValue) bool = false;
                   break;
                 case 'between':
-                  console.log('Condition is checking between');
                   const [min, max] = SQ.option.inputValue.map(Number);
-                  if (answerValue < min || answerValue > max) {
-                    bool = false;
-                    console.log('Working Fine');
-                  }
+                  if (answerValue < min || answerValue > max) bool = false;
                   break;
                 default:
                   break;
               }
             } else if (!SQ.option?.Operation && !haveCommonItems(SQ.option?.options || SQ.option, existingQuestion)) {
               bool = false;
-              console.log('inside last if else', SQ.option.Operation);
             }
           });
         }
@@ -390,70 +413,42 @@ export default function AddaMember({ navigation }) {
       // Check eligibility for documents
       documents.forEach((document) => {
         let bool = true; // Reset bool for each document
-        console.log('Document-', document);
         if (document.schemeQuestions) {
           document.schemeQuestions.forEach((DQ) => {
             let existingQuestion = answers[DQ.question];
-            console.log('existingQuestion-', existingQuestion);
-            console.log('outer', DQ.option?.Operation);
   
             if (DQ.option?.Operation) {
-              console.log('inside', DQ.option.Operation);
-  
               const answerValue = Number(existingQuestion);
               const inputValue = Number(DQ.option.inputValue[0]);
   
               switch (DQ.option.Operation) {
                 case '==':
-                  if (inputValue !== answerValue) {
-                    bool = false;
-                    console.log('Condition is checking == & answer is not correct');
-                  }
+                  if (inputValue !== answerValue) bool = false;
                   break;
                 case '!=':
-                  if (inputValue === answerValue) {
-                    bool = false;
-                    console.log('Condition is checking != & answer is not correct');
-                  }
+                  if (inputValue === answerValue) bool = false;
                   break;
                 case '>':
-                  if (answerValue <= inputValue) {
-                    bool = false;
-                    console.log('Condition is checking > & answer is not correct');
-                  }
+                  if (answerValue <= inputValue) bool = false;
                   break;
                 case '<':
-                  if (answerValue >= inputValue) {
-                    bool = false;
-                    console.log('Condition is checking < & answer is not correct');
-                  }
+                  if (answerValue >= inputValue) bool = false;
                   break;
                 case '>=':
-                  if (answerValue < inputValue) {
-                    bool = false;
-                    console.log('Condition is checking >= & answer is not correct');
-                  }
+                  if (answerValue < inputValue) bool = false;
                   break;
                 case '<=':
-                  if (answerValue > inputValue) {
-                    bool = false;
-                    console.log('Condition is checking <= & answer is not correct');
-                  }
+                  if (answerValue > inputValue) bool = false;
                   break;
                 case 'between':
-                  console.log('Condition is checking between');
                   const [min, max] = DQ.option.inputValue.map(Number);
-                  if (answerValue < min || answerValue > max) {
-                    bool = false;
-                    console.log('Working Fine');
-                  }
+                  if (answerValue < min || answerValue > max) bool = false;
                   break;
                 default:
                   break;
               }
             } else if (!DQ.option?.Operation && !haveCommonItems(DQ.option?.options || DQ.option, existingQuestion)) {
               bool = false;
-              console.log('inside last if else', DQ.option.Operation);
             }
           });
         }
@@ -464,15 +459,11 @@ export default function AddaMember({ navigation }) {
         }
       });
   
-      console.log("eligibleSchemes", eligibleSchemes);
-      console.log("eligibleDocuments", eligibleDocuments);
-  
-      // Flattening the structure to avoid nested arrays
       const formattedAnswers = questions.map(q => ({
         id: q.id,
         conceptName: q.ConceptName,
         selectedOptions: q.ConceptType === 'Number'
-          ?  (answers[q.id] && answers[q.id][0] !== undefined ? [answers[q.id][0]] : ['']) // For number type, use the value directly, default to empty string if undefined// For number type, use the value directly
+          ? (answers[q.id] && answers[q.id][0] !== undefined ? [answers[q.id][0]] : [''])
           : (answers[q.id] || []).map(optionId => {
             const option = q.options.find(o => o.id === optionId);
             return { id: optionId, name: option ? option.name : 'Unknown' };
@@ -487,125 +478,180 @@ export default function AddaMember({ navigation }) {
         .where('ProgramId', '==', userData.ProgramId);
       const memberSnapshot = await memberQuery.get();
   
+      let memberId;
       if (!memberSnapshot.empty) {
         const memberDoc = memberSnapshot.docs[0];
+        memberId = memberDoc.id;
         await memberDoc.ref.update({
           QuestionAnswers: formattedAnswers,
           eligibleSchemes: eligibleSchemes,
           eligibleDocuments: eligibleDocuments,
           phoneNumber: phoneNumber,
           dob: dob,
+          FamilyId: selectedFamilyId,
           location: location,
         });
   
-        navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
-        Alert.alert('Data updated successfully!');
       } else {
-        if (name && phoneNumber && userData.ProgramId && answers) {
-          await membersRef.add({
-            name,
-            normalizedName: name.toLowerCase(),
-            phoneNumber,
-            dob,
-            AadharlastFourDigits: lastFourDigits,
-            ProgramId: userData.ProgramId,
-            QuestionAnswers: formattedAnswers,
-            eligibleSchemes: eligibleSchemes,
-            eligibleDocuments: eligibleDocuments,
-            location: location,
-          });
-          navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
-          Alert.alert('Data saved successfully!');
-        } else {
-          Alert.alert('Missing required fields. Please fill in all the details.');
-        }
+        const newMemberRef = await membersRef.add({
+          name,
+          normalizedName: name.toLowerCase(),
+          phoneNumber,
+          dob,
+          AadharlastFourDigits: lastFourDigits,
+          ProgramId: userData.ProgramId,
+          QuestionAnswers: formattedAnswers,
+          eligibleSchemes: eligibleSchemes,
+          eligibleDocuments: eligibleDocuments,
+          FamilyId: selectedFamilyId,
+          location: location,
+        });
+        memberId = newMemberRef.id;
       }
+  
+      // Update the selected family with new member details
+      const familyRef = firestore().collection('Family').doc(selectedFamilyId);
+      await familyRef.update({
+        MemberAadharList: firestore.FieldValue.arrayUnion(newMemberData.aadhar),
+        MemberIds: firestore.FieldValue.arrayUnion(memberId),
+        MemberNames: firestore.FieldValue.arrayUnion(newMemberData.name),
+        MemberPhoneNumbers: firestore.FieldValue.arrayUnion(newMemberData.phone),
+      });
+  
+      navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
+      Alert.alert('Data saved successfully!');
+  
     } catch (error) {
       console.error('Error checking eligibility and saving data: ', error);
     }
   };
   
+  
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
       {questions.length === 0 && (
-       <>
-       {showScanner ? (
-         <AadharScanner onScan={handleScanComplete} />
-       ) : (
-         <View style={styles.container}>
-           <TouchableOpacity style={styles.button} onPress={() => setShowScanner(true)}>
-             <Text style={styles.buttonText}>SCAN AADHAR</Text>
-           </TouchableOpacity>
- 
-           <TouchableOpacity
-             style={styles.button}
-             onPress={() =>
-               Alert.alert(
-                 'Manual Entry',
-                 'Do you want to enter information manually?',
-                 [
-                   { text: 'Cancel', style: 'cancel' },
-                   { text: 'OK', onPress: () => setManualEntry(true) },
-                 ],
-                 { cancelable: true }
-               )
-             }
-           >
-             <Text style={styles.buttonText}>ENTER MANUALLY</Text>
-           </TouchableOpacity>
- 
-           <TextInput
-             placeholder="Full Name"
-             value={name}
-             onChangeText={setName}
-             style={styles.input}
-             placeholderTextColor="gray"
-             editable={manualEntry} // Disable unless manualEntry is true
-           />
-               <Text style={styles.label}>Select Date of Birth</Text>
-               <TouchableOpacity
-            style={styles.input} // Reusing input style for consistency
-            onPress={showDatepicker}
-            disabled={!manualEntry} // Disable unless manualEntry is true
-          >
-            <Text style={{ color: dob ? '#000' : 'gray' }}>
-              {dob || 'Select DOB'}
-            </Text>
-          </TouchableOpacity>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={dob ? new Date(dob.split('/').reverse().join('-')) : new Date()} // Use last selected date or current date
-              mode="date"
-              display="default"
-              onChange={handleDateChange}
-              maximumDate={new Date()} // Optional: Prevent future dates
-            />
+        <>
+          {showScanner ? (
+            <AadharScanner onScan={handleScanComplete} />
+          ) : (
+            <View style={styles.container}>
+              {/* Family Selection */}
+              <Text style={styles.label}>Select Family</Text>
+              <TouchableOpacity style={styles.input} onPress={() => setModalVisible(true)}>
+                <Text style={styles.inputText}>{selectedFamily || 'Search Family'}</Text>
+                <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
+              </TouchableOpacity>
+  
+              {/* Modal for Family Selection */}
+              <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}
+              >
+                <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+                  <View style={styles.modalOverlay} />
+                </TouchableWithoutFeedback>
+                <View style={styles.modalContainer}>
+                  <View style={styles.modalContent}>
+                    <TextInput
+                      placeholder="Search Family"
+                      style={styles.searchInput}
+                      value={searchText}
+                      onChangeText={handleSearch}
+                      placeholderTextColor="gray"
+                    />
+                 <FlatList
+  data={filteredFamilies.slice(0, 5)}
+  keyExtractor={(item) => item.id}
+  renderItem={({ item }) => (
+    <TouchableOpacity onPress={() => handleFamilySelect(item.FamilyName, item.id)}>
+      <Text style={styles.categoryItem}>{item.FamilyName}</Text>
+    </TouchableOpacity>
+  )}
+  style={styles.categoryList}
+/>
+                    <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                      <Icon name="close" size={35} color="gray" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+  
+              <TouchableOpacity style={styles.button} onPress={() => setShowScanner(true)}>
+                <Text style={styles.buttonText}>SCAN AADHAR</Text>
+              </TouchableOpacity>
+  
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() =>
+                  Alert.alert(
+                    'Manual Entry',
+                    'Do you want to enter information manually?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'OK', onPress: () => setManualEntry(true) },
+                    ],
+                    { cancelable: true }
+                  )
+                }
+              >
+                <Text style={styles.buttonText}>ENTER MANUALLY</Text>
+              </TouchableOpacity>
+  
+              <TextInput
+                placeholder="Full Name"
+                value={name}
+                onChangeText={setName}
+                style={styles.input}
+                placeholderTextColor="gray"
+                editable={manualEntry} // Disable unless manualEntry is true
+              />
+  
+              <Text style={styles.label}>Select Date of Birth</Text>
+              <TouchableOpacity
+                style={styles.input} // Reusing input style for consistency
+                onPress={showDatepicker}
+                disabled={!manualEntry} // Disable unless manualEntry is true
+              >
+                <Text style={{ color: dob ? '#000' : 'gray' }}>
+                  {dob || 'Select DOB'}
+                </Text>
+              </TouchableOpacity>
+  
+              {showDatePicker && (
+                <DateTimePicker
+                  value={dob ? new Date(dob.split('/').reverse().join('-')) : new Date()} // Use last selected date or current date
+                  mode="date"
+                  display="default"
+                  onChange={handleDateChange}
+                  maximumDate={new Date()} // Optional: Prevent future dates
+                />
+              )}
+              <TextInput
+                placeholder="Phone Number"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                style={styles.input}
+                keyboardType="phone-pad"
+                placeholderTextColor="gray"
+              />
+              <TextInput
+                value={lastFourDigits}
+                onChangeText={setLastFourDigits}
+                keyboardType="numeric"
+                maxLength={4}
+                style={styles.input}
+                placeholder="Enter Aadhar last 4 digits"
+                editable={manualEntry} // Disable unless manualEntry is true
+              />
+  
+              <TouchableOpacity style={styles.proceedButton} onPress={handleSubmit}>
+                <Text style={styles.proceedButtonText}>PROCEED</Text>
+              </TouchableOpacity>
+            </View>
           )}
-           <TextInput
-             placeholder="Phone Number"
-             value={phoneNumber}
-             onChangeText={setPhoneNumber}
-             style={styles.input}
-             keyboardType="phone-pad"
-             placeholderTextColor="gray"
-           />
-           <TextInput
-             value={lastFourDigits}
-             onChangeText={setLastFourDigits}
-             keyboardType="numeric"
-             maxLength={4}
-             style={styles.input}
-             placeholder="Enter Aadhar last 4 digits"
-             editable={manualEntry} // Disable unless manualEntry is true
-           />
- 
-           <TouchableOpacity style={styles.proceedButton} onPress={handleSubmit}>
-             <Text style={styles.proceedButtonText}>PROCEED</Text>
-           </TouchableOpacity>
-         </View>
-       )}
-     </>
+        </>
       )}
       {loading && (
         <View style={styles.loaderContainer}>
@@ -613,201 +659,229 @@ export default function AddaMember({ navigation }) {
         </View>
       )}
   
-  {questions.length > 0 && (
-  <ScrollView contentContainerStyle={styles.fullScreenQuestionContainer}>
-    <View style={styles.questionContainer}>
-      <Text style={styles.questionText}>{`${currentQuestionIndex + 1}. ${questions[currentQuestionIndex].ConceptName}`}</Text>
-      {questions[currentQuestionIndex].ConceptType === 'Number' ? (
-        <TextInput
-          style={styles.numberInput}
-          keyboardType="numeric"
-          value={
-            answers[questions[currentQuestionIndex].id] 
-              ? answers[questions[currentQuestionIndex].id][0] // Directly use the first element for number
-              : '' // Default to an empty string if undefined
-          }
-          placeholder="Enter Your Answer"
-          onChangeText={(value) => handleNumberInput(questions[currentQuestionIndex].id, value)}
-        />
-      ) : (
-        questions[currentQuestionIndex].options.map(option => (
-          <TouchableOpacity
-            key={option.id}
-            style={[
-              styles.optionButton,
-              answers[questions[currentQuestionIndex].id] && answers[questions[currentQuestionIndex].id].includes(option.id) && styles.selectedOption
-            ]}
-            onPress={() => handleAnswerSelect(questions[currentQuestionIndex].id, option.id, questions[currentQuestionIndex].TypeOfMCQ === 'multiple' ? 'multiple' : 'single')}
-          >
-            <Text style={styles.optionText}>{option.name}</Text>
-          </TouchableOpacity>
-        ))
-      )}
-    </View>
-
-    <View style={styles.navigationButtons}>
-      {currentQuestionIndex > 0 && (
-        <Button
-          title="Previous"
-          onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex - 1)}
-        />
-      )}
-      {currentQuestionIndex < questions.length - 1 ? (
-        <Button
-          title="Next"
-          onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex + 1)}
-        />
-      ) : (
-        <Button
-          title="Submit"
-          onPress={checkEligibility}
-        />
-      )}
-    </View>
-  </ScrollView>
-)}
-
-
-
-
-
-    </View>
-  );
+      {questions.length > 0 && (
+        <ScrollView contentContainerStyle={styles.fullScreenQuestionContainer}>
+          <View style={styles.questionContainer}>
+            <Text style={styles.questionText}>{`${currentQuestionIndex + 1}. ${questions[currentQuestionIndex].ConceptName}`}</Text>
+            {questions[currentQuestionIndex].ConceptType === 'Number' ? (
+              <TextInput
+                style={styles.numberInput}
+                keyboardType="numeric"
+                value={
+                  answers[questions[currentQuestionIndex].id]
+                    ? answers[questions[currentQuestionIndex].id][0] // Directly use the first element for number
+                    : '' // Default to an empty string if undefined
+                }
+                placeholder="Enter Your Answer"
+                onChangeText={(value) => handleNumberInput(questions[currentQuestionIndex].id, value)}
+              />
+            ) : (
+              questions[currentQuestionIndex].options.map(option => (
+                <TouchableOpacity
+                  key={option.id}
+                  style={[
+                    styles.optionButton,
+                    answers[questions[currentQuestionIndex].id] && answers[questions[currentQuestionIndex].id].includes(option.id) && styles.selectedOption
+                  ]}
+                  onPress={() => handleAnswerSelect(questions[currentQuestionIndex].id, option.id, questions[currentQuestionIndex].TypeOfMCQ === 'multiple' ? 'multiple' : 'single')}
+                >
+                  <Text style={styles.optionText}>{option.name}</Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
   
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-
-  loaderContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  fullScreenQuestionContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-    backgroundColor: '#fff',
-  },
-  questionContainer: {
-    marginBottom: 20,
-  },
-  questionText: {
-    fontSize: 20,
-    marginBottom: 20,
-    color: 'black',
-    textAlign: 'center',
-  },
-  optionButton: {
-    padding: 10,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  selectedOption: {
-    backgroundColor: '#cce5ff',
-  },
-  optionText: {
-    fontSize: 16,
-    color: 'blue',
-  },
-  numberInput: {
-    borderWidth: 1,
-    borderColor: 'grey',
-    padding: 10,
-    borderRadius: 5,
-    backgroundColor: '#f0f0f0',
-    color: 'black',
-    textAlign: 'center',
-  },
-  navigationButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 40,
-  },  fullScreenQuestionContainer: {
-    flexGrow: 1,
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-    backgroundColor: '#fff',
-  },  
- 
-  button: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    marginVertical: 10,
-    alignItems: 'center',
-    elevation: 3, // Add shadow for Android
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 }, // Add shadow for iOS
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  input: {
-    height: 48,
-    borderColor: '#CCCCCC',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    marginVertical: 10,
-    fontSize: 16,
-    backgroundColor: '#F8F8F8',
-  },
-  proceedButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    marginVertical: 20,
-    alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  },
-  proceedButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },  label: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 8,
-  }, dateButton: {
-    backgroundColor: '#6200ee',
-    padding: 12,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginBottom: 16,
-  },  input: {
-    width: '100%',
-    padding: 10,
-    marginVertical: 10,
-    borderColor: '#CCC',
-    borderWidth: 1,
-    borderRadius: 5,
-    justifyContent: 'center', // Center text vertically in the TouchableOpacity
-    alignItems: 'center',
-  },
-
-});
-
+          <View style={styles.navigationButtons}>
+            {currentQuestionIndex > 0 && (
+              <Button
+                title="Previous"
+                onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex - 1)}
+              />
+            )}
+            {currentQuestionIndex < questions.length - 1 ? (
+              <Button
+                title="Next"
+                onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex + 1)}
+              />
+            ) : (
+              <Button
+                title="Submit"
+                onPress={checkEligibility}
+              />
+            )}
+          </View>
+        </ScrollView>
+      )}
+    </ScrollView>
+  );
+  }
+  
+  const styles = StyleSheet.create({
+    scrollContainer: {
+      flexGrow: 1,
+      padding: 20,
+    },
+    container: {
+      flex: 1,
+      padding: 20,
+      backgroundColor: '#fff',
+    },
+    label: {
+      fontSize: 16,
+      color: '#333',
+      marginBottom: 8,
+    },
+    input: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 1,
+      borderColor: '#ccc',
+      borderRadius: 8,
+      padding: 12,
+      backgroundColor: '#f8f8f8',
+      marginBottom: 16,
+    },
+    inputText: {
+      color: '#333',
+      fontSize: 16,
+    },
+    searchIcon: {
+      marginLeft: 10,
+    },
+    modalContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    modalOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    modalContent: {
+      width: '80%',
+      backgroundColor: '#fff',
+      padding: 20,
+      borderRadius: 10,
+      elevation: 10,
+    },
+    categoryList: {
+      maxHeight: 200,
+      marginBottom: 16,
+    },
+    categoryItem: {
+      padding: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: '#ccc',
+      color: 'black',
+    },
+    closeButton: {
+      position: 'absolute',
+      top: -5,
+      right: 0,
+    },
+    searchInput: {
+      borderWidth: 1,
+      borderColor: 'grey',
+      padding: 12,
+      borderRadius: 5,
+      marginBottom: 16,
+      color: 'black',
+      backgroundColor: '#f0f0f0',
+    },
+    loaderContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    fullScreenQuestionContainer: {
+      flexGrow: 1,
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 40,
+      backgroundColor: '#fff',
+    },
+    questionContainer: {
+      marginBottom: 20,
+    },
+    questionText: {
+      fontSize: 20,
+      marginBottom: 20,
+      color: 'black',
+      textAlign: 'center',
+    },
+    optionButton: {
+      padding: 10,
+      backgroundColor: '#f0f0f0',
+      marginBottom: 10,
+      borderRadius: 5,
+      alignItems: 'center',
+    },
+    selectedOption: {
+      backgroundColor: '#cce5ff',
+    },
+    optionText: {
+      fontSize: 16,
+      color: 'blue',
+    },
+    numberInput: {
+      borderWidth: 1,
+      borderColor: 'grey',
+      padding: 10,
+      borderRadius: 5,
+      backgroundColor: '#f0f0f0',
+      color: 'black',
+      textAlign: 'center',
+    },
+    navigationButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 40,
+    },
+    button: {
+      backgroundColor: '#3B82F6',
+      borderRadius: 8,
+      paddingVertical: 14,
+      paddingHorizontal: 28,
+      marginVertical: 10,
+      alignItems: 'center',
+      elevation: 3, // Add shadow for Android
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 }, // Add shadow for iOS
+      shadowOpacity: 0.3,
+      shadowRadius: 3,
+    },
+    buttonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+    proceedButton: {
+      backgroundColor: '#3B82F6',
+      borderRadius: 8,
+      paddingVertical: 14,
+      paddingHorizontal: 28,
+      marginVertical: 20,
+      alignItems: 'center',
+      elevation: 3,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 3,
+    },
+    proceedButtonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+  });
+  
