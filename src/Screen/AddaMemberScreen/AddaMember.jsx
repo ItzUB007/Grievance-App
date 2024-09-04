@@ -40,6 +40,10 @@ export default function AddaMember({ navigation }) {
   const [searchText, setSearchText] = useState('');
   const [selectedFamilyId,setSelectedFamilyId] = useState('');
 
+  useEffect(()=>{
+    console.log(programData)
+  },[])
+
   useEffect(() => {
     const fetchFamilies = async () => {
       try {
@@ -263,7 +267,7 @@ const showDatepicker = () => {
         .where('ProgramId', '==', userData?.ProgramId);
       const memberSnapshot = await memberQuery.get();
   
-      if (!memberSnapshot.empty) {
+      if (!memberSnapshot?.empty) {
         Alert.alert(
           'Member already exists',
           'Do you want to update the details?',
@@ -490,6 +494,10 @@ const showDatepicker = () => {
           dob: dob,
           FamilyId: selectedFamilyId,
           location: location,
+          mpName: programData?.MpName,
+          mpName_Hindi: programData?.MpName_Hindi,
+          createdBy_userId: userId,
+          
         });
   
       } else {
@@ -505,6 +513,9 @@ const showDatepicker = () => {
           eligibleDocuments: eligibleDocuments,
           FamilyId: selectedFamilyId,
           location: location,
+          mpName: programData?.MpName,
+          mpName_Hindi: programData?.MpName_Hindi,
+          createdBy_userId: userId,
         });
         memberId = newMemberRef.id;
       }

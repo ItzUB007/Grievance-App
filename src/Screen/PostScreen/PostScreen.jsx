@@ -35,7 +35,7 @@ import { UserLocationContext } from '../../contexts/UserlocationContext';
 
 
 const PostScreen = () => {
-  const { currentUser, permissions,userData } = useAuth();
+  const { currentUser, permissions,userData,programData} = useAuth();
   const [categories, setCategories] = useState([]);
   const [filteredCategories, setFilteredCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -338,6 +338,8 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
         AadharlastFourDigits:lastFourDigits,
         category_id: categories.find(cat => cat.categoryName === category)?.id || '',
         applicationMethod: applicationMethod,
+        mpName: programData?.MpName,
+        mpName_Hindi: programData?.MpName_Hindi,
         
         
       };
@@ -357,7 +359,8 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
           // Member exists, add the TicketId to the existing member's TicketId array
           const memberDoc = memberSnapshot.docs[0];
           await memberDoc.ref.update({
-              TicketId: firestore.FieldValue.arrayUnion(ticketRef.id)
+              TicketId: firestore.FieldValue.arrayUnion(ticketRef.id),
+              createdBy_userId: userId,
           });
       } else {
           // Member does not exist, create a new member document
@@ -369,7 +372,10 @@ const GeminiCategory = async (description, subject, selectedCategory, categories
               phoneNumber: phoneNo,
               TicketId: [ticketRef.id],
               ProgramId: userData.ProgramId,
-              AadharlastFourDigits:lastFourDigits
+              AadharlastFourDigits:lastFourDigits,
+              mpName: programData?.MpName,
+              mpName_Hindi: programData?.MpName_Hindi,
+              createdBy_userId: userId,
 
           });
       }
