@@ -39,6 +39,7 @@ export default function AddaMember({ navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [selectedFamilyId,setSelectedFamilyId] = useState('');
+  const userId = userData?.uid;
 
   useEffect(()=>{
     console.log(programData)
