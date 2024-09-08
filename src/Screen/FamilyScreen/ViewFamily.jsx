@@ -35,9 +35,18 @@ export default function ViewFamily({ navigation }) {
   };
 
   const handleSearch = () => {
-    const filtered = families.filter(family =>
-      family.FamilyName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filtered = families.filter(family => {
+      // Check if the search query matches the FamilyName
+      const nameMatch = family.FamilyName.toLowerCase().includes(searchQuery.toLowerCase());
+      // Check if the search query matches any Aadhar last four digits
+      const aadharMatch = family.MemberAadharList.some(aadhar =>
+        aadhar.includes(searchQuery)
+      );
+
+      // Return true if either FamilyName or any Aadhar last four digits match
+      return nameMatch || aadharMatch;
+    });
+
     setFilteredFamilies(filtered);
     setCurrentPage(0); // Reset to first page after search
   };

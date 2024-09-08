@@ -53,6 +53,10 @@ export default function AddMembersToFamily({ navigation, route }) {
       const updatedMemberAadharList = [];
       const updatedMemberPhoneNumbers = [];
 
+      // Identify newly added members and removed members
+      const newMembers = selectedMembers.filter(id => !family.MemberIds.includes(id));
+      const removedMembers = family.MemberIds.filter(id => !selectedMembers.includes(id));
+
       // Include only selected members in the update
       selectedMembers.forEach(memberId => {
         const member = members.find(m => m.id === memberId);
@@ -63,12 +67,29 @@ export default function AddMembersToFamily({ navigation, route }) {
         }
       });
 
+      // Update family data in Firestore
       await familyRef.update({
         MemberNames: updatedMemberNames,
         MemberAadharList: updatedMemberAadharList,
         MemberPhoneNumbers: updatedMemberPhoneNumbers,
         MemberIds: selectedMembers // Update MemberIds with only selected members
       });
+
+      // Update the FamilyId for newly added members
+      const addFamilyIdToMember = async (memberId) => {
+        const memberRef = firestore().collection('Members').doc(memberId);
+        await memberRef.update({ FamilyId: family.id });
+      };
+
+      // Remove the FamilyId for removed members
+      const removeFamilyIdFromMember = async (memberId) => {
+        const memberRef = firestore().collection('Members').doc(memberId);
+        await memberRef.update({ FamilyId: "" }); // Clear the FamilyId
+      };
+
+      // Perform Firestore updates for adding/removing FamilyId
+      await Promise.all(newMembers.map(addFamilyIdToMember));
+      await Promise.all(removedMembers.map(removeFamilyIdFromMember));
 
       alert('Family members updated successfully!');
       navigation.goBack();
@@ -85,6 +106,7 @@ export default function AddMembersToFamily({ navigation, route }) {
     );
   }
 
+  
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Add Members to Family: {family.FamilyName}</Text>

@@ -38,7 +38,6 @@ export default function CreateFamily({ navigation, route }) {
     const memberNames = selectedMembersData.map(member => member.name);
     const memberPhoneNumbers = selectedMembersData.map(member => member.phoneNumber);
 
-
     const familyData = {
       FamilyName: familyName,
       MemberIds: selectedMembers,
@@ -49,10 +48,35 @@ export default function CreateFamily({ navigation, route }) {
     };
 
     try {
-      await firestore().collection('Family').add(familyData);
-      Alert.alert('Family created successfully!');
-      
-      navigation.navigate('ViewFamily')
+      // Create the family document
+      const familyRef = await firestore().collection('Family').add(familyData);
+      const familyId = familyRef.id;
+
+      // Update FamilyId for selected members
+      const updateMemberFamilyId = async (member) => {
+        const memberRef = firestore().collection('Members').doc(member.id);
+        const memberDoc = await memberRef.get();
+
+        if (memberDoc.exists) {
+          const memberData = memberDoc.data();
+
+          // Check if a FamilyId already exists, and update if needed
+          if (memberData.FamilyId && memberData.FamilyId !== "") {
+            // If the member already has a FamilyId, you may decide how to handle it
+            // For now, we are overwriting the FamilyId with the new one
+            await memberRef.update({ FamilyId: familyId });
+          } else {
+            // If no FamilyId exists, set the new FamilyId
+            await memberRef.update({ FamilyId: familyId });
+          }
+        }
+      };
+
+      // Run the FamilyId update for all selected members
+      await Promise.all(selectedMembersData.map(member => updateMemberFamilyId(member)));
+
+      Alert.alert('Family created and members updated successfully!');
+      navigation.navigate('ViewFamily');
     } catch (error) {
       console.error('Error creating family: ', error);
       Alert.alert('Failed to create family.');
@@ -64,7 +88,6 @@ export default function CreateFamily({ navigation, route }) {
     const filtered = members.filter(member =>
       member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.AadharlastFourDigits.includes(searchQuery)
-      // || member.phoneNumber.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredMembers(filtered);
     setCurrentPage(0);
@@ -135,7 +158,6 @@ export default function CreateFamily({ navigation, route }) {
         <Text style={[styles.tableCell, styles.headerCell]}>Phone No</Text>
       </View>
       {currentMembers.map((member) => (
-
         <TouchableOpacity
           key={member.id}
           style={[styles.tableRow, selectedMembers.includes(member.id) ? styles.selectedRow : null]}
@@ -146,7 +168,6 @@ export default function CreateFamily({ navigation, route }) {
           <Text style={styles.tableCell}>{member.phoneNumber}</Text>
         </TouchableOpacity>
       ))}
-
 
       <View style={styles.paginationContainer}>
         <TouchableOpacity
@@ -164,10 +185,10 @@ export default function CreateFamily({ navigation, route }) {
           <Text style={styles.buttonText}>Next</Text>
         </TouchableOpacity>
       </View>
-
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
