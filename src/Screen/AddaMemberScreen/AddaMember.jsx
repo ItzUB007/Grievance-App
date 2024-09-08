@@ -8,7 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import AadharScanner from '../../components/AadharScanner';
 import { UserLocationContext } from '../../contexts/UserlocationContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
-//import { Picker } from '@react-native-picker/picker';
+import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 
@@ -40,6 +40,8 @@ export default function AddaMember({ navigation }) {
   const [searchText, setSearchText] = useState('');
   const [selectedFamilyId,setSelectedFamilyId] = useState('');
   const userId = userData?.uid;
+  const [isCreatingNewFamily, setIsCreatingNewFamily] = useState(false);
+const [newFamilyName, setNewFamilyName] = useState('');
 
   useEffect(()=>{
     console.log(programData)
@@ -354,6 +356,22 @@ const showDatepicker = () => {
         name: name,
       };
   
+      // Use this variable to store the final Family ID (existing or newly created)
+      let familyIdToUse = selectedFamilyId; // Default to existing selected family
+  
+      // If creating a new family, first create the family in Firestore
+      if (isCreatingNewFamily && newFamilyName) {
+        const newFamilyRef = await firestore().collection('Family').add({
+          FamilyName: newFamilyName,
+          MemberAadharList: [],
+          MemberIds: [],
+          MemberNames: [],
+          MemberPhoneNumbers: [],
+          ProgramId: userData.ProgramId,
+        });
+        familyIdToUse = newFamilyRef.id; // Store the newly created family ID
+      }
+  
       function haveCommonItems(arr1, arr2) {
         const set1 = new Set(arr1);
         const commonItems = arr2?.filter(item => set1.has(item));
@@ -493,7 +511,7 @@ const showDatepicker = () => {
           eligibleDocuments: eligibleDocuments,
           phoneNumber: phoneNumber,
           dob: dob,
-          FamilyId: selectedFamilyId,
+          FamilyId: familyIdToUse, // Use the correct family ID
           location: location,
           mpName: programData?.MpName,
           mpName_Hindi: programData?.MpName_Hindi,
@@ -512,7 +530,7 @@ const showDatepicker = () => {
           QuestionAnswers: formattedAnswers,
           eligibleSchemes: eligibleSchemes,
           eligibleDocuments: eligibleDocuments,
-          FamilyId: selectedFamilyId,
+          FamilyId: familyIdToUse, // Use the correct family ID
           location: location,
           mpName: programData?.MpName,
           mpName_Hindi: programData?.MpName_Hindi,
@@ -521,14 +539,26 @@ const showDatepicker = () => {
         memberId = newMemberRef.id;
       }
   
-      // Update the selected family with new member details
-      const familyRef = firestore().collection('Family').doc(selectedFamilyId);
-      await familyRef.update({
-        MemberAadharList: firestore.FieldValue.arrayUnion(newMemberData.aadhar),
-        MemberIds: firestore.FieldValue.arrayUnion(memberId),
-        MemberNames: firestore.FieldValue.arrayUnion(newMemberData.name),
-        MemberPhoneNumbers: firestore.FieldValue.arrayUnion(newMemberData.phone),
-      });
+      const familyRef = firestore().collection('Family').doc(familyIdToUse);
+      const familySnapshot = await familyRef.get();
+      let existingFamilyData = familySnapshot.data();
+  
+      // Check if Aadhaar is already in MemberAadharList
+      if (!existingFamilyData.MemberAadharList.includes(lastFourDigits)) {
+        // If Aadhaar doesn't already exist, add the member data
+  
+        // Manual handling of MemberNames to allow same names
+        let updatedMemberNames = [...existingFamilyData.MemberNames, name];
+  
+        await familyRef.update({
+          MemberAadharList: firestore.FieldValue.arrayUnion(lastFourDigits),
+          MemberIds: firestore.FieldValue.arrayUnion(memberId),
+          MemberNames: updatedMemberNames, // Directly updating the name array to allow duplicates
+          MemberPhoneNumbers: firestore.FieldValue.arrayUnion(phoneNumber),
+        });
+      } else {
+        console.log('Aadhaar number already exists in the family.');
+      }
   
       navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
       Alert.alert('Data saved successfully!');
@@ -541,190 +571,218 @@ const showDatepicker = () => {
   
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
-      {questions.length === 0 && (
-        <>
-          {showScanner ? (
-            <AadharScanner onScan={handleScanComplete} />
+  {questions.length === 0 && (
+    <>
+      {showScanner ? (
+        <AadharScanner onScan={handleScanComplete} />
+      ) : (
+        <View style={styles.container}>
+          {/* Dropdown for Selecting or Creating a Family */}
+          <Text style={styles.label}>Select or Create Family</Text>
+          <Picker
+            selectedValue={isCreatingNewFamily ? 'create' : 'select'}
+            onValueChange={(value) => {
+              if (value === 'create') {
+                setIsCreatingNewFamily(true);
+                setSelectedFamily(''); // Clear selected family when creating a new one
+              } else {
+                setIsCreatingNewFamily(false);
+              }
+            }}
+          >
+            <Picker.Item label="Create a New Family" value="create" />
+            <Picker.Item label="Select Family" value="select" />
+          </Picker>
+
+          {/* Conditionally show TextInput for creating a new family or the existing family selection */}
+          {isCreatingNewFamily ? (
+            <TextInput
+              placeholder="Enter Family Name"
+              value={newFamilyName}
+              onChangeText={setNewFamilyName}
+              style={styles.input}
+              placeholderTextColor="gray"
+            />
           ) : (
-            <View style={styles.container}>
-              {/* Family Selection */}
-              <Text style={styles.label}>Select Family</Text>
-              <TouchableOpacity style={styles.input} onPress={() => setModalVisible(true)}>
-                <Text style={styles.inputText}>{selectedFamily || 'Search Family'}</Text>
-                <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
-              </TouchableOpacity>
-  
-              {/* Modal for Family Selection */}
-              <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-              >
-                <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
-                  <View style={styles.modalOverlay} />
-                </TouchableWithoutFeedback>
-                <View style={styles.modalContainer}>
-                  <View style={styles.modalContent}>
-                    <TextInput
-                      placeholder="Search Family"
-                      style={styles.searchInput}
-                      value={searchText}
-                      onChangeText={handleSearch}
-                      placeholderTextColor="gray"
-                    />
-                 <FlatList
-  data={filteredFamilies.slice(0, 5)}
-  keyExtractor={(item) => item.id}
-  renderItem={({ item }) => (
-    <TouchableOpacity onPress={() => handleFamilySelect(item.FamilyName, item.id)}>
-      <Text style={styles.categoryItem}>{item.FamilyName}</Text>
-    </TouchableOpacity>
-  )}
-  style={styles.categoryList}
-/>
-                    <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                      <Icon name="close" size={35} color="gray" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Modal>
-  
-              <TouchableOpacity style={styles.button} onPress={() => setShowScanner(true)}>
-                <Text style={styles.buttonText}>SCAN AADHAR</Text>
-              </TouchableOpacity>
-  
-              <TouchableOpacity
-                style={styles.button}
-                onPress={() =>
-                  Alert.alert(
-                    'Manual Entry',
-                    'Do you want to enter information manually?',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'OK', onPress: () => setManualEntry(true) },
-                    ],
-                    { cancelable: true }
-                  )
-                }
-              >
-                <Text style={styles.buttonText}>ENTER MANUALLY</Text>
-              </TouchableOpacity>
-  
-              <TextInput
-                placeholder="Full Name"
-                value={name}
-                onChangeText={setName}
-                style={styles.input}
-                placeholderTextColor="gray"
-                editable={manualEntry} // Disable unless manualEntry is true
-              />
-  
-              <Text style={styles.label}>Select Date of Birth</Text>
-              <TouchableOpacity
-                style={styles.input} // Reusing input style for consistency
-                onPress={showDatepicker}
-                disabled={!manualEntry} // Disable unless manualEntry is true
-              >
-                <Text style={{ color: dob ? '#000' : 'gray' }}>
-                  {dob || 'Select DOB'}
-                </Text>
-              </TouchableOpacity>
-  
-              {showDatePicker && (
-                <DateTimePicker
-                  value={dob ? new Date(dob.split('/').reverse().join('-')) : new Date()} // Use last selected date or current date
-                  mode="date"
-                  display="default"
-                  onChange={handleDateChange}
-                  maximumDate={new Date()} // Optional: Prevent future dates
-                />
-              )}
-              <TextInput
-                placeholder="Phone Number"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                style={styles.input}
-                keyboardType="phone-pad"
-                placeholderTextColor="gray"
-              />
-              <TextInput
-                value={lastFourDigits}
-                onChangeText={setLastFourDigits}
-                keyboardType="numeric"
-                maxLength={4}
-                style={styles.input}
-                placeholder="Enter Aadhar last 4 digits"
-                editable={manualEntry} // Disable unless manualEntry is true
-              />
-  
-              <TouchableOpacity style={styles.proceedButton} onPress={handleSubmit}>
-                <Text style={styles.proceedButtonText}>PROCEED</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.input} onPress={() => setModalVisible(true)}>
+              <Text style={styles.inputText}>{selectedFamily || 'Search Family'}</Text>
+              <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
+            </TouchableOpacity>
           )}
-        </>
-      )}
-      {loading && (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
+
+          {/* Modal for Family Selection */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+              <View style={styles.modalOverlay} />
+            </TouchableWithoutFeedback>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <TextInput
+                  placeholder="Search Family"
+                  style={styles.searchInput}
+                  value={searchText}
+                  onChangeText={handleSearch}
+                  placeholderTextColor="gray"
+                />
+                <FlatList
+                  data={filteredFamilies.slice(0, 5)}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity onPress={() => handleFamilySelect(item.FamilyName, item.id)}>
+                      <Text style={styles.categoryItem}>{item.FamilyName}</Text>
+                    </TouchableOpacity>
+                  )}
+                  style={styles.categoryList}
+                />
+                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                  <Icon name="close" size={35} color="gray" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          <TouchableOpacity style={styles.button} onPress={() => setShowScanner(true)}>
+            <Text style={styles.buttonText}>SCAN AADHAR</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() =>
+              Alert.alert(
+                'Manual Entry',
+                'Do you want to enter information manually?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'OK', onPress: () => setManualEntry(true) },
+                ],
+                { cancelable: true }
+              )
+            }
+          >
+            <Text style={styles.buttonText}>ENTER MANUALLY</Text>
+          </TouchableOpacity>
+
+          <TextInput
+            placeholder="Full Name"
+            value={name}
+            onChangeText={setName}
+            style={styles.input}
+            placeholderTextColor="gray"
+            editable={manualEntry} // Disable unless manualEntry is true
+          />
+
+          <Text style={styles.label}>Select Date of Birth</Text>
+          <TouchableOpacity
+            style={styles.input} // Reusing input style for consistency
+            onPress={showDatepicker}
+            disabled={!manualEntry} // Disable unless manualEntry is true
+          >
+            <Text style={{ color: dob ? '#000' : 'gray' }}>
+              {dob || 'Select DOB'}
+            </Text>
+          </TouchableOpacity>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={dob ? new Date(dob.split('/').reverse().join('-')) : new Date()} // Use last selected date or current date
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+              maximumDate={new Date()} // Optional: Prevent future dates
+            />
+          )}
+
+          <TextInput
+            placeholder="Phone Number"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            style={styles.input}
+            keyboardType="phone-pad"
+            placeholderTextColor="gray"
+          />
+          <TextInput
+            value={lastFourDigits}
+            onChangeText={setLastFourDigits}
+            keyboardType="numeric"
+            maxLength={4}
+            style={styles.input}
+            placeholder="Enter Aadhar last 4 digits"
+            editable={manualEntry} // Disable unless manualEntry is true
+          />
+
+          <TouchableOpacity style={styles.proceedButton} onPress={handleSubmit}>
+            <Text style={styles.proceedButtonText}>PROCEED</Text>
+          </TouchableOpacity>
         </View>
       )}
-  
-      {questions.length > 0 && (
-        <ScrollView contentContainerStyle={styles.fullScreenQuestionContainer}>
-          <View style={styles.questionContainer}>
-            <Text style={styles.questionText}>{`${currentQuestionIndex + 1}. ${questions[currentQuestionIndex].ConceptName}`}</Text>
-            {questions[currentQuestionIndex].ConceptType === 'Number' ? (
-              <TextInput
-                style={styles.numberInput}
-                keyboardType="numeric"
-                value={
-                  answers[questions[currentQuestionIndex].id]
-                    ? answers[questions[currentQuestionIndex].id][0] // Directly use the first element for number
-                    : '' // Default to an empty string if undefined
-                }
-                placeholder="Enter Your Answer"
-                onChangeText={(value) => handleNumberInput(questions[currentQuestionIndex].id, value)}
-              />
-            ) : (
-              questions[currentQuestionIndex].options.map(option => (
-                <TouchableOpacity
-                  key={option.id}
-                  style={[
-                    styles.optionButton,
-                    answers[questions[currentQuestionIndex].id] && answers[questions[currentQuestionIndex].id].includes(option.id) && styles.selectedOption
-                  ]}
-                  onPress={() => handleAnswerSelect(questions[currentQuestionIndex].id, option.id, questions[currentQuestionIndex].TypeOfMCQ === 'multiple' ? 'multiple' : 'single')}
-                >
-                  <Text style={styles.optionText}>{option.name}</Text>
-                </TouchableOpacity>
-              ))
-            )}
-          </View>
-  
-          <View style={styles.navigationButtons}>
-            {currentQuestionIndex > 0 && (
-              <Button
-                title="Previous"
-                onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex - 1)}
-              />
-            )}
-            {currentQuestionIndex < questions.length - 1 ? (
-              <Button
-                title="Next"
-                onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex + 1)}
-              />
-            ) : (
-              <Button
-                title="Submit"
-                onPress={checkEligibility}
-              />
-            )}
-          </View>
-        </ScrollView>
-      )}
+    </>
+  )}
+  {loading && (
+    <View style={styles.loaderContainer}>
+      <ActivityIndicator size="large" color="#0000ff" />
+    </View>
+  )}
+
+  {questions.length > 0 && (
+    <ScrollView contentContainerStyle={styles.fullScreenQuestionContainer}>
+      <View style={styles.questionContainer}>
+        <Text style={styles.questionText}>{`${currentQuestionIndex + 1}. ${questions[currentQuestionIndex].ConceptName}`}</Text>
+        {questions[currentQuestionIndex].ConceptType === 'Number' ? (
+          <TextInput
+            style={styles.numberInput}
+            keyboardType="numeric"
+            value={
+              answers[questions[currentQuestionIndex].id]
+                ? answers[questions[currentQuestionIndex].id][0] // Directly use the first element for number
+                : '' // Default to an empty string if undefined
+            }
+            placeholder="Enter Your Answer"
+            onChangeText={(value) => handleNumberInput(questions[currentQuestionIndex].id, value)}
+          />
+        ) : (
+          questions[currentQuestionIndex].options.map(option => (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.optionButton,
+                answers[questions[currentQuestionIndex].id] && answers[questions[currentQuestionIndex].id].includes(option.id) && styles.selectedOption
+              ]}
+              onPress={() => handleAnswerSelect(questions[currentQuestionIndex].id, option.id, questions[currentQuestionIndex].TypeOfMCQ === 'multiple' ? 'multiple' : 'single')}
+            >
+              <Text style={styles.optionText}>{option.name}</Text>
+            </TouchableOpacity>
+          ))
+        )}
+      </View>
+
+      <View style={styles.navigationButtons}>
+        {currentQuestionIndex > 0 && (
+          <Button
+            title="Previous"
+            onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex - 1)}
+          />
+        )}
+        {currentQuestionIndex < questions.length - 1 ? (
+          <Button
+            title="Next"
+            onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex + 1)}
+          />
+        ) : (
+          <Button
+            title="Submit"
+            onPress={checkEligibility}
+          />
+        )}
+      </View>
     </ScrollView>
+  )}
+</ScrollView>
+
   );
   }
   
