@@ -37,6 +37,7 @@ const TicketDetails = ({ route }) => {
     newDocuments.splice(index, 1);
     setDocuments(newDocuments);
   };
+  const ProgramId = userData?.ProgramId;
 
   // const [attachments, setAttachments] = useState([]); 
 
@@ -65,12 +66,13 @@ const TicketDetails = ({ route }) => {
   
     const commentData = {
       ticketId,
+      ProgramId,
       commentType: statusType,
       fromStatus: statusType === 'changeStatus' ? ticketDetails?.status : null,
       toStatus: statusType === 'changeStatus' ? toStatus : null,
       commentMsg,
       commented_by: userData?.displayName,
-      commentStatus:'Open',
+      commentStatus: 'Open',
       attachments: statusType === 'changeStatus' && uploadedAttachments.length > 0 ? uploadedAttachments : null,
       created_on: firestore.FieldValue.serverTimestamp(), // Set server timestamp
       updated_on: firestore.FieldValue.serverTimestamp(), // Set server timestamp
@@ -80,15 +82,26 @@ const TicketDetails = ({ route }) => {
       // Add the comment
       await firestore().collection('Comments').add(commentData);
   
-     
+      // Create a notification document
+      const notificationData = {
+        NotificationType: 'Ticket', // This can change based on what type of notification you're adding (Scheme, Ticket, etc.)
+        TypeId: ticketId, // Ticket ID or Scheme ID
+        NotificationText: commentMsg,
+        NotificationBy: userData?.displayName,
+        RequestType: statusType === 'changeStatus' ? 'changeStatus' : 'Comment',
+        NotificationTime: firestore.FieldValue.serverTimestamp(),
+        Status: 'Unread', // Initial status as Unread
+        ProgramId: ProgramId // Relating the notification to the specific program
+      };
+  
+      // Add the notification to the Notifications collection
+      await firestore().collection('Notifications').add(notificationData);
+  
       // Update the ticket document
       await firestore().collection('Tickets').doc(ticketId).update({
         updated_on: firestore.FieldValue.serverTimestamp(), // Only update timestamp
       });
   
-     
-  
-    
       // Reset form states after submission
       setCommentMsg('');
       setFromStatus('');
@@ -101,6 +114,7 @@ const TicketDetails = ({ route }) => {
       Alert.alert('Error', 'Failed to submit your comment or request.');
     }
   };
+  
   
 
 
