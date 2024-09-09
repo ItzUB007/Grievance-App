@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, TextInput } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function AddMembersToFamily({ navigation, route }) {
   const [members, setMembers] = useState([]);
+  const [filteredMembers, setFilteredMembers] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize] = useState(10); // Number of members per page
+  const [searchQuery, setSearchQuery] = useState('');
   const { family } = route.params; // Receive current family data
 
   useEffect(() => {
     fetchMembers();
   }, []);
+
+  useEffect(() => {
+    setFilteredMembers(members); // Initialize filtered members with all members
+  }, [members]);
 
   const fetchMembers = async () => {
     try {
@@ -22,12 +31,12 @@ export default function AddMembersToFamily({ navigation, route }) {
         ...doc.data()
       }));
 
-      // Set initial selectedMembers based on current family members
       const initiallySelected = membersList
         .filter(member => family.MemberIds.includes(member.id))
         .map(member => member.id);
 
       setMembers(membersList);
+      setFilteredMembers(membersList);
       setSelectedMembers(initiallySelected);
       setLoading(false);
     } catch (error) {
@@ -46,18 +55,14 @@ export default function AddMembersToFamily({ navigation, route }) {
 
   const addSelectedMembersToFamily = async () => {
     try {
-      // Update family document with new members
       const familyRef = firestore().collection('Family').doc(family.id);
-
       const updatedMemberNames = [];
       const updatedMemberAadharList = [];
       const updatedMemberPhoneNumbers = [];
 
-      // Identify newly added members and removed members
       const newMembers = selectedMembers.filter(id => !family.MemberIds.includes(id));
       const removedMembers = family.MemberIds.filter(id => !selectedMembers.includes(id));
 
-      // Include only selected members in the update
       selectedMembers.forEach(memberId => {
         const member = members.find(m => m.id === memberId);
         if (member) {
@@ -67,27 +72,23 @@ export default function AddMembersToFamily({ navigation, route }) {
         }
       });
 
-      // Update family data in Firestore
       await familyRef.update({
         MemberNames: updatedMemberNames,
         MemberAadharList: updatedMemberAadharList,
         MemberPhoneNumbers: updatedMemberPhoneNumbers,
-        MemberIds: selectedMembers // Update MemberIds with only selected members
+        MemberIds: selectedMembers
       });
 
-      // Update the FamilyId for newly added members
       const addFamilyIdToMember = async (memberId) => {
         const memberRef = firestore().collection('Members').doc(memberId);
         await memberRef.update({ FamilyId: family.id });
       };
 
-      // Remove the FamilyId for removed members
       const removeFamilyIdFromMember = async (memberId) => {
         const memberRef = firestore().collection('Members').doc(memberId);
-        await memberRef.update({ FamilyId: "" }); // Clear the FamilyId
+        await memberRef.update({ FamilyId: "" });
       };
 
-      // Perform Firestore updates for adding/removing FamilyId
       await Promise.all(newMembers.map(addFamilyIdToMember));
       await Promise.all(removedMembers.map(removeFamilyIdFromMember));
 
@@ -98,6 +99,36 @@ export default function AddMembersToFamily({ navigation, route }) {
     }
   };
 
+  const handleSearch = () => {
+    const filtered = members.filter(member =>
+      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.AadharlastFourDigits.includes(searchQuery)
+    );
+    setFilteredMembers(filtered);
+    setCurrentPage(0);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setFilteredMembers(members);
+    setCurrentPage(0);
+  };
+
+  const handleNextPage = () => {
+    if ((currentPage + 1) * pageSize < filteredMembers.length) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const startIndex = currentPage * pageSize;
+  const currentMembers = filteredMembers.slice(startIndex, startIndex + pageSize);
+
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
@@ -106,17 +137,34 @@ export default function AddMembersToFamily({ navigation, route }) {
     );
   }
 
-  
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Add Members to Family: {family.FamilyName}</Text>
+      
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search Members"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+            <Icon name="close-circle" size={24} color="#333" />
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+          <Text style={styles.buttonText}>Search</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.table}>
         <View style={styles.tableHeader}>
           <Text style={[styles.tableCell, styles.headerCell]}>Name</Text>
           <Text style={[styles.tableCell, styles.headerCell]}>Aadhaar No</Text>
           <Text style={[styles.tableCell, styles.headerCell]}>Action</Text>
         </View>
-        {members.map((member, index) => (
+        {currentMembers.map((member, index) => (
           <View key={index} style={styles.tableRow}>
             <Text style={styles.tableCell}>{member.name}</Text>
             <Text style={styles.tableCell}>{member.AadharlastFourDigits}</Text>
@@ -127,11 +175,31 @@ export default function AddMembersToFamily({ navigation, route }) {
               ]}
               onPress={() => toggleMemberSelection(member)}
             >
-              <Text style={styles.buttonText}>{selectedMembers.includes(member.id) ? 'Remove' : 'Add'}</Text>
+              <Text style={styles.buttonText}>
+                {selectedMembers.includes(member.id) ? 'Remove' : 'Add'}
+              </Text>
             </TouchableOpacity>
           </View>
         ))}
       </View>
+
+      <View style={styles.paginationContainer}>
+        <TouchableOpacity
+          style={styles.paginationButton}
+          onPress={handlePrevPage}
+          disabled={currentPage === 0}
+        >
+          <Text style={styles.buttonText}>Previous</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.paginationButton}
+          onPress={handleNextPage}
+          disabled={(currentPage + 1) * pageSize >= filteredMembers.length}
+        >
+          <Text style={styles.buttonText}>Next</Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={styles.addButton} onPress={addSelectedMembersToFamily}>
         <Text style={styles.buttonText}>Update Family Members</Text>
       </TouchableOpacity>
@@ -151,6 +219,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
     color: '#333',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    position: 'relative'
+  },
+  searchInput: {
+    flex: 1,
+    borderColor: '#ddd',
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 5,
+    marginRight: 10,
+    paddingRight: 40,
+  },
+  clearButton: {
+    position: 'absolute',
+    right: 85,
+    top: 12,
+    zIndex: 5
+  },
+  searchButton: {
+    backgroundColor: '#3B82F6',
+    padding: 10,
+    borderRadius: 5,
   },
   table: {
     width: '100%',
@@ -213,5 +307,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  paginationButton: {
+    backgroundColor: '#3B82F6',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 50,
   },
 });
