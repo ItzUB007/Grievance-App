@@ -12,6 +12,7 @@ import { PermissionsAndroid, Platform, Alert } from 'react-native';
 import PushNotification from 'react-native-push-notification';
 import Geolocation from 'react-native-geolocation-service';
 import { UserLocationContext } from './src/contexts/UserlocationContext.js';
+import { NotificationProvider } from './src/contexts/NotificationContext.js';
 
 // Create notification channel
 const createChannel = () => {
@@ -154,9 +155,11 @@ const App = () => {
     <Provider store={store}>
       <AuthProvider>
         <UserLocationContext.Provider value={{location, setLocation}}>
+      
           <NavigationContainer>
             {user ? <TabNavigations /> : <StackNavigator />}
           </NavigationContainer>
+         
         </UserLocationContext.Provider>
       </AuthProvider>
     </Provider>

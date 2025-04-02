@@ -8,7 +8,7 @@ export default function LogoutButton() {
         .signOut()
         .then(response => {
           console.log('response :', response);
-          Alert.alert('User signed out!');
+          // Alert.alert('User signed out!');
         })
         .catch(error => {
           console.log('error :', error);

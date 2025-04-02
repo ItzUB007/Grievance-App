@@ -5,10 +5,16 @@ import { serverTimestamp } from '@react-native-firebase/firestore';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Picker } from '@react-native-picker/picker'; // Import for dropdown picker
 import { launchCamera } from 'react-native-image-picker';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import storage from '@react-native-firebase/storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { updateDoc, doc } from '@react-native-firebase/firestore'; 
+import colors from '../../styles/colors';
+import {
+  responsiveWidth,
+  responsiveHeight,
+  responsiveFontSize,
+} from 'react-native-responsive-dimensions';
 
 
 // Helper function to format Firestore Timestamp
@@ -283,43 +289,66 @@ const TicketDetails = ({ route }) => {
           <Text style={styles.commentDate}>Date & Time : {formatDate(comment.updated_on)}</Text>
         </View>
       ))}
-      <View style={styles.dropdownContainer}>
-        <Text>Status Type:</Text>
+         <Text style={styles.label}>Status Type:</Text>
+<View style={styles.pickerinput}>
+     
         <Picker
           selectedValue={statusType}
           onValueChange={(itemValue) => setStatusType(itemValue)}
+          style={styles.picker}
+          itemStyle={styles.pickerItem}
+          mode="dropdown"
         >
           <Picker.Item label="Comment" value="Comment" />
           <Picker.Item label="Request Status Change" value="changeStatus" />
         </Picker>
+        <Icon
+    name="arrow-drop-down"
+    size={responsiveFontSize(3)} // Adjust size as needed
+    color="gray" // Set to a visible color
+    style={styles.pickerIcon}
+  />
       </View>
 
       {statusType === 'changeStatus' && (
         <>
+          {/* <Text style={styles.commentText}>From Status: {ticketDetails?.status}</Text> */}
+          <Text style={styles.commentText}>Select  Status Change:</Text>
+          <View style={styles.pickerinput}>
+        
+            <Picker
+              selectedValue={toStatus}
+              onValueChange={(itemValue) => setToStatus(itemValue)}
+              style={styles.picker}
+              itemStyle={styles.pickerItem}
+              mode="dropdown"
 
-          <Text style={styles.detailText}>From Status: {ticketDetails?.status}</Text>
-
-
-          <Text>Request Status Change:</Text>
-          <Picker
-            selectedValue={toStatus}
-            onValueChange={(itemValue) => setToStatus(itemValue)}
-          >
-            <Picker.Item label="Open" value="Open" />
-            <Picker.Item label="Pending" value="Pending" />
-            <Picker.Item label="Rejected" value="Rejected" />
-            <Picker.Item label="Resolved" value="Resolved" />
-          </Picker>
+            >
+              <Picker.Item label="Open" value="Open" />
+              <Picker.Item label="Pending" value="Pending" />
+              <Picker.Item label="Rejected" value="Rejected" />
+              <Picker.Item label="Resolved" value="Resolved" />
+            </Picker>
+            <Icon
+    name="arrow-drop-down"
+    size={responsiveFontSize(3)} // Adjust size as needed
+    color="gray" // Set to a visible color
+    style={styles.pickerIcon}
+  />
+          </View>
         </>
       )}
 
-      <Text>Comment:</Text>
+      <Text style={styles.commentText}>Comment:</Text>
       <TextInput
         style={styles.input}
         onChangeText={setCommentMsg}
         value={commentMsg}
         placeholder="Add your comment here"
+        placeholderTextColor={'gray'}
+        
       />
+
 
       {statusType === 'changeStatus' && (
         <>
@@ -420,6 +449,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     marginBottom: 8,
+    textAlign:'center'
   },
   commentDate: {
     fontSize: 14,
@@ -427,25 +457,43 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   dropdownContainer: {
-    margin: 15,
-    backgroundColor: '#ffffff',
+    marginVertical: 5,
+    backgroundColor: '#f9f9f9',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
     padding: 10,
   },
+  pickerinput: {
+    borderWidth: 0.5,
+    borderColor: colors.greyHeading,
+    paddingHorizontal: responsiveWidth(1.5),
+    paddingVertical: Platform.OS === 'android' ? 0 : responsiveHeight(1),
+    borderRadius: responsiveWidth(4),
+    marginBottom: responsiveHeight(2),
+    backgroundColor: colors.themewhite,
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  picker: {
+    flex: 1,
+    color: 'black',
+  },
   input: {
-    height: 50,
+    height: 60,
     borderColor: '#ccc',
     borderWidth: 1,
-    marginHorizontal: 15,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
     borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    backgroundColor: '#f9f9f9',
+    color: '#333',
   },
   button: {
-    backgroundColor: '#6200ee',
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: colors.themered,
+    padding: 10,
+    borderRadius: 15,
     alignItems: 'center',
     marginHorizontal: 15,
     marginTop: 20,
@@ -456,9 +504,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   uploadButton: {
-    backgroundColor: '#ff6347',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: colors.themered,
+    padding: 10,
+    borderRadius: 15,
     alignItems: 'center',
     marginHorizontal: 15,
     marginBottom: 16,
@@ -478,6 +526,12 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     marginLeft: 10,
+  },
+  pickerIcon: {
+    position: 'absolute',
+    right: responsiveWidth(2.5),
+    top: Platform.OS === 'android' ? responsiveHeight(1.8) : responsiveHeight(2.5),
+    pointerEvents: 'none', // Ensures the icon doesn't intercept touch events
   },
 });
 

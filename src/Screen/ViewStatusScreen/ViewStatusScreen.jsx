@@ -4,7 +4,12 @@ import firestore from '@react-native-firebase/firestore';
 // import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../contexts/AuthContext';
-
+import {
+  responsiveWidth,
+  responsiveHeight,
+  responsiveFontSize,
+} from 'react-native-responsive-dimensions';
+import colors from '../../styles/colors';
 
 const ViewStatusScreen = ({ navigation }) => {
   const { currentUser, permissions,userData } = useAuth();
@@ -187,6 +192,7 @@ const ViewStatusScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.title}>Grievance Redressal Status</Text>
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchBar}
@@ -203,6 +209,7 @@ const ViewStatusScreen = ({ navigation }) => {
         <Button
           title="Search"
           onPress={handleSearch}
+          
         />
       </View>
       <FlatList
@@ -232,6 +239,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F0F0',
     padding: 10,
   },
+  title: {
+    fontSize: responsiveFontSize(2), // Approx 15px
+    fontWeight: 'bold',
+    marginBottom: responsiveHeight(3), // Approx 24px
+    color: colors.themered,
+    fontFamily: 'Montserrat-Regular',
+    lineHeight: responsiveFontSize(2.4), // Approx 18px
+    marginTop: responsiveHeight(2.5), // Approx 20px
+    padding: responsiveWidth(1.25), // Approx 5px
+    marginLeft: responsiveWidth(5), // Approx 20px
+  },
   searchContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -243,8 +261,8 @@ const styles = StyleSheet.create({
     padding: 10,
     marginRight: 10,
     borderColor: '#CCC',
-    borderWidth: 1,
-    borderRadius: 5,
+    borderWidth: 0.5,
+    borderRadius: 15,
     backgroundColor: '#FFF',
     color: '#6200ee',
   },
@@ -258,7 +276,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     marginHorizontal: 10,
     borderRadius: 10,
-    elevation: 2,
+    elevation: 0.5,
     shadowOpacity: 0.1,
     shadowRadius: 3,
     shadowOffset: { width: 1, height: 1 },
@@ -292,6 +310,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     margin: 10,
+
   },
   loader: {
     flex: 1,

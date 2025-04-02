@@ -29,8 +29,8 @@ const HomeStackNavigator = () => {
         component={HomeScreen} 
         options={{ headerShown: false }} // Hide the header for HomeMain
       />
-      <Stack.Screen name="Post" component={PostScreen} />
-      <Stack.Screen name="ViewStatus" component={ViewStatusScreen} />
+      <Stack.Screen name="Post" component={PostScreen} options={{ headerShown: false }}/>
+      <Stack.Screen name="ViewStatus" component={ViewStatusScreen} options={{ headerShown: false }}/>
       <Stack.Screen name="TicketDetails" component={TicketDetails} />
       <Stack.Screen name="Grievance" component={GrievanceScreen} />
       <Stack.Screen name="Adhikar" component={AdhikarScreen} />

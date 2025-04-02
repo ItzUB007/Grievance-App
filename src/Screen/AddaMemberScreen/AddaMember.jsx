@@ -9,7 +9,13 @@ import AadharScanner from '../../components/AadharScanner';
 import { UserLocationContext } from '../../contexts/UserlocationContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import {
+  responsiveWidth,
+  responsiveHeight,
+  responsiveFontSize,
+} from 'react-native-responsive-dimensions';
+import colors from '../../styles/colors';
 
 
 
@@ -579,8 +585,12 @@ const showDatepicker = () => {
         <View style={styles.container}>
           {/* Dropdown for Selecting or Creating a Family */}
           <Text style={styles.label}>Select or Create Family</Text>
+          <View style={styles.pickerinput}>
           <Picker
             selectedValue={isCreatingNewFamily ? 'create' : 'select'}
+            style={styles.picker}
+           
+            mode="dropdown"
             onValueChange={(value) => {
               if (value === 'create') {
                 setIsCreatingNewFamily(true);
@@ -593,7 +603,13 @@ const showDatepicker = () => {
             <Picker.Item label="Create a New Family" value="create" />
             <Picker.Item label="Select Family" value="select" />
           </Picker>
-
+          <Icon
+    name="arrow-drop-down"
+    size={responsiveFontSize(3)} // Adjust size as needed
+    color="gray" // Set to a visible color
+    style={styles.pickerIcon}
+  />
+</View>
           {/* Conditionally show TextInput for creating a new family or the existing family selection */}
           {isCreatingNewFamily ? (
             <TextInput
@@ -712,6 +728,7 @@ const showDatepicker = () => {
             maxLength={4}
             style={styles.input}
             placeholder="Enter Aadhar last 4 digits"
+            placeholderTextColor={'gray'}
             editable={manualEntry} // Disable unless manualEntry is true
           />
 
@@ -811,6 +828,7 @@ const showDatepicker = () => {
       padding: 12,
       backgroundColor: '#f8f8f8',
       marginBottom: 16,
+      color:'black'
     },
     inputText: {
       color: '#333',
@@ -952,6 +970,28 @@ const showDatepicker = () => {
       color: '#FFFFFF',
       fontSize: 16,
       fontWeight: 'bold',
+    },
+    pickerIcon: {
+      position: 'absolute',
+      right: responsiveWidth(2.5),
+      top: Platform.OS === 'android' ? responsiveHeight(1.8) : responsiveHeight(2.5),
+      pointerEvents: 'none', // Ensures the icon doesn't intercept touch events
+    },
+    picker: {
+      flex: 1,
+      color: 'black',
+    },
+    pickerinput: {
+      borderWidth: 0.5,
+      borderColor: colors.greyHeading,
+      paddingHorizontal: responsiveWidth(1.5),
+      paddingVertical: Platform.OS === 'android' ? 0 : responsiveHeight(1),
+      borderRadius: responsiveWidth(4),
+      marginBottom: responsiveHeight(2),
+      backgroundColor: colors.themewhite,
+      flexDirection: 'row',
+      alignItems: 'center',
+      position: 'relative',
     },
   });
   

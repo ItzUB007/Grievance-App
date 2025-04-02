@@ -12,22 +12,33 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Platform,
+  StatusBar,
+  Switch,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
-import Icon from 'react-native-vector-icons/FontAwesome';
+// import Icon from 'react-native-vector-icons/FontAwesome';
 import storage from '@react-native-firebase/storage';
 import DocumentPicker from 'react-native-document-picker';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNFS from 'react-native-fs';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import services from '../../utils/services';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { launchCamera } from 'react-native-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import AadharScanner from '../../components/AadharScanner';
 import { UserLocationContext } from '../../contexts/UserlocationContext';
+import colors from '../../styles/colors';
+import {
+  responsiveWidth,
+  responsiveHeight,
+  responsiveFontSize,
+} from 'react-native-responsive-dimensions';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { toggleSlider } from '../../../redux/features/sliderSlice';
+
 
 
 
@@ -62,7 +73,7 @@ const PostScreen = () => {
   const [manualEntry, setManualEntry] = useState(false);
   const { location } = useContext(UserLocationContext);
   const [tempDob, setTempDob] = useState(dob);
-
+  const Dispatch = useDispatch()
   const handleScanComplete = (data) => {
     if (data) {
       setFullName(data.name); // Set full name using setFullName
@@ -339,7 +350,7 @@ const PostScreen = () => {
         gender: gender,
         dob: dob,
         state: state,
-        city: city,
+        // city: city,
         location: location,
         AadharlastFourDigits: lastFourDigits,
         category_id: categories.find(cat => cat.categoryName === category)?.id || '',
@@ -477,13 +488,21 @@ const PostScreen = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
+      
+      <Text style={styles.title}>Grievance Redressal Form</Text>
+      
+      
       <View style={styles.container}>
-        <Text style={styles.title}>Grievance Redressal Form</Text>
-
+          
+        
         {showScanner ? (
           <AadharScanner onScan={handleScanComplete} />
         ) : (
           <View style={styles.container}>
+            <View style={styles.formContainer}>
+          
+
+
             <TouchableOpacity style={styles.button} onPress={() => setShowScanner(true)}>
               <Text style={styles.buttonText}>SCAN AADHAR</Text>
             </TouchableOpacity>
@@ -504,9 +523,18 @@ const PostScreen = () => {
             >
               <Text style={styles.buttonText}>ENTER MANUALLY</Text>
             </TouchableOpacity>
-
-
-
+            </View>
+         
+            
+            <View style={styles.formBox}>
+                 {/* Slider for AI Suggestions */}
+          <View style={styles.sliderContainer}>
+        <Text style={styles.sliderText}>AI Category Suggestion : {isOn ? 'On' : 'Off'}</Text>
+        <Switch
+          value={isOn}
+          onValueChange={() => Dispatch(toggleSlider())}
+        />
+      </View>
             <Text style={styles.label}>Select Category</Text>
             <TouchableOpacity style={styles.input} onPress={() => setModalVisible(true)}>
               <Text style={styles.inputText}>{selectedCategory || 'Search Category'}</Text>
@@ -542,7 +570,7 @@ const PostScreen = () => {
                     style={styles.categoryList}
                   />
                   <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                    <Icon name="close" size={35} color="gray" />
+                    <Icon name="close" size={40} color="gray" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -584,6 +612,7 @@ const PostScreen = () => {
               maxLength={4}
               style={styles.input}
               placeholder="Enter Aadhar last 4 digits"
+               placeholderTextColor="gray"
               editable={manualEntry} // Disable unless manualEntry is true
             />
             <Text style={styles.label}>Phone Number</Text>
@@ -596,28 +625,24 @@ const PostScreen = () => {
               keyboardType="phone-pad"
             />
 
-            <Text style={styles.label}>Select Gender</Text>
-            <Picker
-              selectedValue={gender}
-              onValueChange={(itemValue) => setGender(itemValue)}
-              style={styles.input}
-            >
-              <Picker.Item label="Male" value="Male" />
-              <Picker.Item label="Female" value="Female" />
-              <Picker.Item label="Other" value="Other" />
-            </Picker>
+           
 
             <Text style={styles.label}>Select Date of Birth</Text>
             <TouchableOpacity
               style={styles.input} // Reusing input style for consistency
               onPress={showDatepicker}
-              disabled={!manualEntry} // Disable unless manualEntry is true
+              // disabled={!manualEntry} // Disable unless manualEntry is true
             >
+              
               <Text style={{ color: dob ? '#000' : 'gray' }}>
                 {dob || 'Select DOB'}
+                
+      
               </Text>
+      
             </TouchableOpacity>
-
+            
+         
             {showDatePicker && (
               <DateTimePicker
                 value={dob ? new Date(dob.split('/').reverse().join('-')) : new Date()}
@@ -627,11 +652,35 @@ const PostScreen = () => {
                 maximumDate={new Date()} // Optional: Prevent future dates
               />
             )}
+
+            <Text style={styles.label}>Select Gender</Text>
+            <View style={styles.pickerinput}>
+   <Picker
+    selectedValue={gender}
+    onValueChange={(itemValue) => setGender(itemValue)}
+    style={styles.picker}
+    itemStyle={styles.pickerItem}
+    mode="dropdown"
+  >
+    <Picker.Item label="Male" value="Male" />
+    <Picker.Item label="Female" value="Female" />
+    <Picker.Item label="Other" value="Other" />
+  </Picker>
+  <Icon
+    name="arrow-drop-down"
+    size={responsiveFontSize(3)} // Adjust size as needed
+    color="gray" // Set to a visible color
+    style={styles.pickerIcon}
+  />
+</View>
+
             <Text style={styles.label}>Select State</Text>
+            <View style={styles.pickerinput}>
             <Picker
               selectedValue={state}
               onValueChange={(itemValue) => setState(itemValue)}
-              style={styles.input}
+              style={styles.picker}
+              itemStyle={styles.pickerItem}
             >
               <Picker.Item label="Andhra Pradesh" value="Andhra Pradesh" />
               <Picker.Item label="Arunachal Pradesh" value="Arunachal Pradesh" />
@@ -663,7 +712,14 @@ const PostScreen = () => {
               <Picker.Item label="Uttarakhand" value="Uttarakhand" />
               <Picker.Item label="West Bengal" value="West Bengal" />
             </Picker>
-
+            <Icon
+    name="arrow-drop-down"
+    size={responsiveFontSize(3)} // Adjust size as needed
+    color="gray" // Set to a visible color
+    style={styles.pickerIcon}
+  />
+             </View>
+{/*         
             <Text style={styles.label}>City</Text>
             <TextInput
               placeholder="Enter Your City Name"
@@ -671,19 +727,31 @@ const PostScreen = () => {
               value={city}
               onChangeText={setCity}
               placeholderTextColor="gray"
-            />
+            /> */}
+
+          
 
 
             <Text style={styles.label}>Select Priority</Text>
-            <Picker
-              selectedValue={priority}
-              onValueChange={(itemValue, itemIndex) => setPriority(itemValue)}
-              style={styles.input}
-            >
-              <Picker.Item label="High" value="High" />
-              <Picker.Item label="Medium" value="Medium" />
-              <Picker.Item label="Low" value="Low" />
-            </Picker>
+            <View style={styles.pickerinput}>
+  <Picker
+    selectedValue={priority}
+    onValueChange={(itemValue) => setPriority(itemValue)}
+    style={styles.picker}
+    itemStyle={styles.pickerItem}
+    mode="dropdown"
+  >
+    <Picker.Item label="High" value="High" />
+    <Picker.Item label="Medium" value="Medium" />
+    <Picker.Item label="Low" value="Low" />
+  </Picker>
+  <Icon
+    name="arrow-drop-down"
+    size={responsiveFontSize(3)} // Adjust size as needed
+    color="gray" // Set to a visible color
+    style={styles.pickerIcon}
+  />
+</View>
 
 
             {applicationMethod && (
@@ -728,9 +796,11 @@ const PostScreen = () => {
                 <Text style={styles.buttonText}>Submit</Text>
               )}
             </TouchableOpacity>
-
+            </View>
+         
           </View>
         )}
+        
       </View>
     </ScrollView>
   );
@@ -739,37 +809,85 @@ const PostScreen = () => {
 const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: colors.themewhite,
   },
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
+    justifyContent: 'center',
+    backgroundColor: colors.themewhite,
     width: '100%',
+    alignItems: 'center',
+  },
+  sliderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: responsiveWidth(4),
+    paddingVertical: responsiveHeight(1.5),
+    marginBottom: responsiveHeight(2),
+    backgroundColor: colors.themewhite,
+    borderRadius: responsiveWidth(4),
+    borderWidth: 0.5,
+    borderColor: colors.greyHeading,
+  },
+  sliderText: {
+    fontSize: responsiveFontSize(2),
+    color: colors.greyHeading,
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+  },
+  formContainer: {
+    flex: 1,
+    padding: responsiveWidth(4), // Approx 16px on a standard screen
+    backgroundColor: colors.themewhite,
+    width: '90%',
+    marginBottom: responsiveHeight(2.5), // Approx 20px
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: responsiveHeight(0.25) }, // Approx 2px
+    shadowOpacity: 0.1,
+    shadowRadius: responsiveWidth(1), // Approx 4px
+    elevation: 3,
+  },
+  formBox: {
+    marginTop: responsiveHeight(1.25), // Approx 10px
+    flex: 1,
+    padding: responsiveWidth(4.5), // Approx 18px
+    backgroundColor: colors.themewhite,
+    width: '90%',
+    marginBottom: responsiveHeight(2.5),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: responsiveHeight(0.25) },
+    shadowOpacity: 0.1,
+    shadowRadius: responsiveWidth(1),
+    elevation: 3,
   },
   title: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(2), // Approx 15px
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 24,
-    color: '#333',
+    marginBottom: responsiveHeight(3), // Approx 24px
+    color: colors.themered,
+    fontFamily: 'Montserrat-Regular',
+    lineHeight: responsiveFontSize(2.4), // Approx 18px
+    marginTop: responsiveHeight(2.5), // Approx 20px
+    padding: responsiveWidth(1.25), // Approx 5px
+    marginLeft: responsiveWidth(5), // Approx 20px
   },
   label: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 8,
+    fontSize: responsiveFontSize(1.8), // Approx 14px
+    color: colors.greyHeading,
+    marginBottom: responsiveHeight(1), // Approx 8px
+    lineHeight: responsiveFontSize(2.2), // Approx 18px
+    marginLeft: responsiveWidth(1.25), // Approx 5px
   },
   input: {
-    borderWidth: 1,
-    borderColor: 'grey',
-    padding: 12,
-    borderRadius: 5,
-    marginBottom: 16,
+    borderWidth: 0.5,
+    borderColor: colors.greyHeading,
+    padding: responsiveWidth(2.5), // Approx 10px
+    borderRadius: responsiveWidth(4), // Approx 15px
+    marginBottom: responsiveHeight(2), // Approx 16px
     color: 'black',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.themewhite,
     flexDirection: 'row',
-    justifyContent: 'center', // Center text vertically in the TouchableOpacity
     alignItems: 'center',
   },
   inputText: {
@@ -779,28 +897,28 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   userInfo: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(2), // Approx 16px
     color: '#333',
-    marginBottom: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'grey',
-    borderRadius: 5,
-    backgroundColor: '#f0f0f0',
+    marginBottom: responsiveHeight(2),
+    padding: responsiveWidth(3), // Approx 12px
+    borderWidth: 0.5,
+    borderColor: colors.greyHeading,
+    borderRadius: responsiveWidth(4), // Approx 5px
+    // backgroundColor: '#f0f0f0',
   },
   button: {
-    backgroundColor: '#6200ee',
-    padding: 12,
-    borderRadius: 5,
+    backgroundColor: colors.themered,
+    padding: responsiveWidth(2.5), // Approx 10px
+    borderRadius: responsiveWidth(4), // Approx 15px
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: responsiveHeight(0.6), // Approx 5px
   },
   uploadButton: {
-    backgroundColor: '#ff6347',
-    padding: 12,
-    borderRadius: 5,
+    backgroundColor: colors.themered,
+    padding: responsiveWidth(2.5),
+    borderRadius: responsiveWidth(2.5), // Approx 10px
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: responsiveHeight(2), // Approx 16px
   },
   uploadButtons: {
     flexDirection: 'row',
@@ -808,22 +926,23 @@ const styles = StyleSheet.create({
   },
   dateButton: {
     backgroundColor: '#6200ee',
-    padding: 12,
-    borderRadius: 5,
+    padding: responsiveWidth(3), // Approx 12px
+    borderRadius: responsiveWidth(1.5), // Approx 5px
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: responsiveHeight(2),
   },
   buttonText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
+    fontSize: responsiveFontSize(1.75), // Approx 14px
+    color: colors.themewhite,
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
   },
   categoryList: {
-    maxHeight: 200,
-    marginBottom: 16,
+    maxHeight: responsiveHeight(25), // Approx 200px
+    marginBottom: responsiveHeight(2),
   },
   categoryItem: {
-    padding: 10,
+    padding: responsiveWidth(2.5), // Approx 10px
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
     color: 'black',
@@ -832,7 +951,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background to dim the content behind
+  },
+  modalContent: {
+    width: '90%', // Slightly wider for better content display
+    backgroundColor: '#fff',
+    padding: responsiveWidth(5), // Increased padding for spaciousness
+    borderRadius: responsiveWidth(2), // Subtle rounding for modern look
+    elevation: 5, // Shadow for Android
+    shadowColor: '#000', // Shadow color for iOS
+    shadowOffset: { width: 0, height: responsiveHeight(0.5) }, // Offset for shadow
+    shadowOpacity: 0.25, // Opacity of shadow
+    shadowRadius: responsiveWidth(2), // Blur radius for shadow
+    // alignItems: 'center', // Center content horizontally
+    textAlign:'center'
   },
   modalOverlay: {
     position: 'absolute',
@@ -841,36 +973,29 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  modalContent: {
-    width: '80%',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 10,
-    elevation: 10,
-  },
+ 
   searchInput: {
     borderWidth: 1,
     borderColor: 'grey',
-    padding: 12,
-    borderRadius: 5,
-    marginBottom: 16,
+    padding: responsiveWidth(3), // Approx 12px
+    borderRadius: responsiveWidth(1.5), // Approx 5px
+    marginBottom: responsiveHeight(2),
     color: 'black',
     backgroundColor: '#f0f0f0',
   },
   closeButton: {
     position: 'absolute',
-    top: -5,
-    right: 0,
-
+    top: responsiveHeight(-1), // Positioning from the top
+    right: responsiveWidth(-1.8), // Positioning from the right
   },
   documentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'grey',
-    padding: 12,
-    borderRadius: 5,
-    marginBottom: 8,
+    padding: responsiveWidth(3),
+    borderRadius: responsiveWidth(1.5),
+    marginBottom: responsiveHeight(1), // Approx 8px
     backgroundColor: '#f0f0f0',
   },
   documentText: {
@@ -878,35 +1003,64 @@ const styles = StyleSheet.create({
     color: 'black',
   },
   removeButton: {
-    marginLeft: 8,
-  },
-  searchIcon: {
-    marginLeft: 8,
+    marginLeft: responsiveWidth(2),
   },
   uploadButtonText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(2), // Approx 16px
     color: '#fff',
     fontWeight: '600',
   },
   uploadOptionsLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(2),
     color: '#333',
-    marginBottom: 8,
-    textAlign: 'center'
+    marginBottom: responsiveHeight(1), // Approx 8px
+    textAlign: 'center',
   },
   permissionContainer: {
     flex: 1,
     flexDirection: 'column',
-    paddingBottom: 106,
+    paddingBottom: responsiveHeight(13), // Approx 106px
   },
   innerContainer: {
-    padding: 16,
+    padding: responsiveWidth(4), // Approx 16px
   },
   errorText: {
-    fontSize: 24, // h4 equivalent in React Native
-    color: 'red', // equivalent to the "error" color
+    fontSize: responsiveFontSize(3), // Approx 24px
+    color: 'red',
     textAlign: 'center',
   },
+  pickerinput: {
+    borderWidth: 0.5,
+    borderColor: colors.greyHeading,
+    paddingHorizontal: responsiveWidth(1.5),
+    paddingVertical: Platform.OS === 'android' ? 0 : responsiveHeight(1),
+    borderRadius: responsiveWidth(4),
+    marginBottom: responsiveHeight(2),
+    backgroundColor: colors.themewhite,
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  picker: {
+    flex: 1,
+    color: 'black',
+  },
+  pickerIcon: {
+    position: 'absolute',
+    right: responsiveWidth(2.5),
+    top: Platform.OS === 'android' ? responsiveHeight(1.8) : responsiveHeight(2.5),
+    pointerEvents: 'none', // Ensures the icon doesn't intercept touch events
+  },
+  
+
+  // pickerItem: {
+  //   fontSize: responsiveFontSize(2), // Approx 15px
+  //   height: responsiveHeight(4),     // Adjust the height as needed
+  // },
+
 });
+
+
+
 
 export default PostScreen;

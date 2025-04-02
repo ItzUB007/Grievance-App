@@ -6,11 +6,14 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import React, { useState } from 'react';
 import auth from '@react-native-firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
+
+const { width, height } = Dimensions.get('window');
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -36,7 +39,7 @@ const LoginScreen = () => {
             .update({ emailVerified: true }) // Update emailVerified field
             .then(() => {
               setLoading(false);
-              Alert.alert('Login successfully!');
+              // Alert.alert('Login successfully!');
               navigation.navigate('Home'); // Navigate to home screen
             });
         } else {
@@ -84,7 +87,64 @@ const LoginScreen = () => {
           <Text style={styles.registerTitle}>Login</Text>
         )}
       </TouchableOpacity>
-      <TouchableOpacity
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    padding: width * 0.04,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%',
+    backgroundColor: '#fff',
+  },
+  inputBox: {
+    borderWidth: 1,
+    borderColor: 'grey',
+    paddingHorizontal: width * 0.03,
+    borderRadius: width * 0.04,
+    width: '90%',
+    marginTop: height * 0.02,
+    color: 'black',
+    backgroundColor: '#f0f0f0',
+    fontSize: width * 0.04,
+  },
+  register: {
+    width: '90%',
+    backgroundColor: '#E53535',
+    paddingVertical: height * 0.015,
+    borderRadius: width * 0.08,
+    alignItems: 'center',
+    marginTop: height * 0.03,
+  },
+  registerTitle: {
+    fontSize: width * 0.045,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  signup: {
+    fontSize: width * 0.05,
+    color: '#000000',
+    fontWeight: '600',
+    marginBottom: height * 0.02,
+  },
+  title: {
+    fontSize: width * 0.06,
+    fontWeight: '600',
+    lineHeight: width * 0.065,
+    color: '#E53535',
+    marginBottom: height * 0.03,
+  },
+});
+
+export default LoginScreen;
+
+
+
+
+
+  {/*  <TouchableOpacity
         style={styles.linkContainer}
         onPress={() => navigation.navigate('Register')}
       >
@@ -97,73 +157,4 @@ const LoginScreen = () => {
       >
         <Text style={styles.phoneSignInButtonText}>Sign In with Phone Number</Text>
       </TouchableOpacity>
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100%',
-    backgroundColor: '#fff', // Set background color to white
-  },
-  inputBox: {
-    borderWidth: 1,
-    borderColor: 'grey',
-    paddingHorizontal: 12,
-    borderRadius: 5,
-    width: '90%',
-    marginTop: 20,
-    color: 'black',
-    backgroundColor: '#f0f0f0',
-  },
-  register: {
-    width: '90%',
-    backgroundColor: '#FCAF03',
-    padding: 12,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  registerTitle: {
-    fontSize: 16,
-    color: '#000000',
-    fontWeight: '600',
-  },
-  signup: {
-    fontSize: 20,
-    color: '#000000',
-    fontWeight: '600',
-    marginBottom: 20,
-  },
-  registerLink: {
-    fontSize: 16,
-    color: '#0000FF',
-  },
-  linkContainer: {
-    marginTop: 25,
-  },
-  phoneSignInButton: {
-    width: '90%',
-    backgroundColor: '#6200ee',
-    padding: 12,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  phoneSignInButtonText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 20,
-    color: '#6200ee',
-    fontWeight: '600',
-    marginBottom: 20,
-  },
-});
-
-export default LoginScreen;
+      */}

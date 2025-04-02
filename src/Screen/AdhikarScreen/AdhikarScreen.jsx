@@ -7,7 +7,7 @@ const AdhikarScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Image source={require('../../Assets/logo.jpeg')} style={styles.logo} />
+      <Image source={require('../../Assets/img/logo.jpeg')} style={styles.logo} />
       <Text style={styles.title}>Welcome To Adhikar</Text>
       <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('AddaMember')}>
         <Text style={styles.buttonText}>Add a Member</Text>

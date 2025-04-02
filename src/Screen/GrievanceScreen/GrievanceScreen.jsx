@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import colors from '../../styles/colors';
+import fontFamily from '../../styles/fontFamily';
 
 
 
@@ -12,13 +14,13 @@ const GrievanceScreen = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Welcome To Adhikar Grievance</Text>
       <TouchableOpacity style={styles.option} onPress={() => navigation.navigate('Post')}>
-        <Image source={require('../../Assets/post.png')} style={styles.image} />
+        <Image source={require('../../Assets/img/post.png')} style={styles.image} />
         <Text style={styles.optionText}>Raise a Ticket</Text>
       </TouchableOpacity>
       {/* Add a border line here between these two buttons */}
       <View style={styles.separator} />
       <TouchableOpacity style={styles.option} onPress={() => navigation.navigate('ViewStatus')}>
-        <Image source={require('../../Assets/status.png')} style={styles.image} />
+        <Image source={require('../../Assets/img/status.png')} style={styles.image} />
         <Text style={styles.optionText}>VIEW STATUS</Text>
       </TouchableOpacity>
   
@@ -57,9 +59,10 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    color: '#6200ee',
+    color: colors.themered,
     fontWeight: '600',
     marginTop: 10,
+    fontFamily:fontFamily.medium,
   },
 
 });
