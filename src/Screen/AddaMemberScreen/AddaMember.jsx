@@ -1,8 +1,7 @@
+// AddaMember.js
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, ScrollView,
-   Modal, ActivityIndicator, 
-   TouchableWithoutFeedback,
-   FlatList} from 'react-native';
+  Modal, ActivityIndicator, TouchableWithoutFeedback, FlatList, Platform } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import AadharScanner from '../../components/AadharScanner';
@@ -16,6 +15,10 @@ import {
   responsiveFontSize,
 } from 'react-native-responsive-dimensions';
 import colors from '../../styles/colors';
+import { apiPost } from '../../utils/apiService';
+import { CHECK_ELIGIBLITY } from '../../config/urls';
+import { fetchFamilies,fetchSchemesAndDocuments, fetchQuestions } from '../../utils/dbServices/AddaMemberService';
+
 
 
 
@@ -23,7 +26,7 @@ export default function AddaMember({ navigation }) {
   const { programData, permissions, userData } = useAuth();
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  var [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,209 +41,110 @@ export default function AddaMember({ navigation }) {
   const [manualEntry, setManualEntry] = useState(false);
   const { location } = useContext(UserLocationContext);
   const [dob, setDob] = useState('');
-  const [tempDob, setTempDob] = useState(dob); // Temporary state for DOB
+  const [tempDob, setTempDob] = useState(dob);
   const [families, setFamilies] = useState([]);
   const [filteredFamilies, setFilteredFamilies] = useState([]);
   const [selectedFamily, setSelectedFamily] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [selectedFamilyId,setSelectedFamilyId] = useState('');
+  const [selectedFamilyId, setSelectedFamilyId] = useState('');
   const userId = userData?.uid;
   const [isCreatingNewFamily, setIsCreatingNewFamily] = useState(false);
-const [newFamilyName, setNewFamilyName] = useState('');
-
-  useEffect(()=>{
-    console.log(programData)
-  },[])
+  const [newFamilyName, setNewFamilyName] = useState('');
 
   useEffect(() => {
-    const fetchFamilies = async () => {
+    console.log(programData);
+  }, []);
+
+  useEffect(() => {
+    // Fetch families using dbService
+    const loadFamilies = async () => {
       try {
-        const familiesRef = firestore().collection('Family');
-        const familiesSnapshot = await familiesRef
-          .where('ProgramId', '==', userData?.ProgramId)
-          .get();
-  
-        const fetchedFamilies = familiesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-  
+        const fetchedFamilies = await fetchFamilies(userData?.ProgramId);
         setFamilies(fetchedFamilies);
-        setFilteredFamilies(fetchedFamilies.slice(0, 5)); // Set initial state to first 5 families
+        setFilteredFamilies(fetchedFamilies.slice(0, 5));
       } catch (error) {
         console.error('Error fetching families: ', error);
       }
     };
-  
-    fetchFamilies();
+    loadFamilies();
   }, [userData?.ProgramId]);
-  
 
-const handleSearch = (text) => {
-  setSearchText(text);
-  if (text) {
-    const filtered = families.filter((family) =>
-      family.FamilyName.toLowerCase().includes(text.toLowerCase())
-    );
-    setFilteredFamilies(filtered);
-  } else {
-    setFilteredFamilies(families.slice(0, 5)); // Show up to 5 families initially
-  }
-};
+  const handleSearch = (text) => {
+    setSearchText(text);
+    if (text) {
+      const filtered = families.filter(family =>
+        family.FamilyName.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredFamilies(filtered);
+    } else {
+      setFilteredFamilies(families.slice(0, 5));
+    }
+  };
 
+  const handleFamilySelect = (familyName, familyId) => {
+    setSelectedFamily(familyName);
+    setSelectedFamilyId(familyId);
+    setModalVisible(false);
+  };
 
-const handleFamilySelect = (familyName, familyId) => {
-  setSelectedFamily(familyName);
-  
-  setSelectedFamilyId(familyId);
-  setModalVisible(false);
-  // Store the family ID to use in submission logic
-};
+  const handleDateChange = (event, selectedDate) => {
+    setShowDatePicker(false);
+    if (event.type === 'set' && selectedDate) {
+      const day = selectedDate.getDate().toString().padStart(2, '0');
+      const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+      const year = selectedDate.getFullYear();
+      const formattedDate = `${day}/${month}/${year}`;
+      setTempDob(formattedDate);
+      setDob(formattedDate);
+    } else if (event.type === 'dismissed') {
+      setDob(tempDob);
+    }
+  };
 
+  const showDatepicker = () => {
+    setTempDob(dob);
+    setShowDatePicker(true);
+  };
 
-
-const handleDateChange = (event, selectedDate) => {
-  setShowDatePicker(false); // Hide the date picker after selection
-
-  if (event.type === 'set' && selectedDate) {
-    // If the user pressed "OK", update both tempDob and dob
-    const day = selectedDate.getDate().toString().padStart(2, '0');
-    const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
-    const year = selectedDate.getFullYear();
-    const formattedDate = `${day}/${month}/${year}`;
-    setTempDob(formattedDate); // Set the temporary DOB
-    setDob(formattedDate); // Update the actual DOB state
-  } else if (event.type === 'dismissed') {
-    // If the user pressed "Cancel", do nothing, and restore tempDob
-    setDob(tempDob); // Restore to last selected date
-  }
-};
-
-const showDatepicker = () => {
-  setTempDob(dob); // Save the current DOB before showing the picker
-  setShowDatePicker(true);
-};
-
-
-  
   const handleScanComplete = (data) => {
-   
     if (data) {
       setName(data.name);
       setLastFourDigits(data.lastFourDigits);
-      setDob(data.dob); // Set DOB value
+      setDob(data.dob);
       setShowScanner(false);
       setManualEntry(false);
     }
   };
 
-  const fetchSchemesAndDocuments = async (schemeIds, documentIds) => {
-    // console.log('Fetching schemes with IDs: ', schemeIds);
-    // console.log('Fetching documents with IDs: ', documentIds);
+  
+  const loadSchemesDocumentsQuestions = async (schemeIds, documentIds) => {
     try {
-      // Fetch schemes
-      const schemeQuery = await firestore().collection('Schemes').where(firestore.FieldPath.documentId(), 'in', schemeIds).get();
-      const fetchedSchemes = schemeQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setSchemes(fetchedSchemes);
-      console.log('Fetched Schemes: ', fetchedSchemes);
-
-      // Fetch documents
-      const documentQuery = await firestore().collection('Documents').where(firestore.FieldPath.documentId(), 'in', documentIds).get();
-      const fetchedDocuments = documentQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setDocuments(fetchedDocuments);
-      console.log('Fetched Documents: ', fetchedDocuments);
-
-      const schemeQuestions = [];
-      const documentQuestions = [];
+      const {
+        fetchedSchemes,
+        fetchedDocuments,
+        schemeQuestions,
+        documentQuestions
+      } = await fetchSchemesAndDocuments(schemeIds, documentIds);
       
-      // Process scheme questions
-      fetchedSchemes.forEach(scheme => {
-        if (scheme.schemeQuestions) {
-          scheme.schemeQuestions.forEach(question => {
-            schemeQuestions.push({ question: question.question, correctOptions: question.option, TypeOfMCQ: question.option?.TypeOfMCQ });
-          });
-        }
-      });
-
-      // Process document questions
-      fetchedDocuments.forEach(document => {
-        if (document.schemeQuestions) {
-          document.schemeQuestions.forEach(question => {
-            documentQuestions.push({ question: question.question, correctOptions: question.option, TypeOfMCQ: question.option?.TypeOfMCQ });
-          });
-        }
-      });
-
+      setSchemes(fetchedSchemes);
+      setDocuments(fetchedDocuments);
       setSchemeQuestions(schemeQuestions);
       setDocumentQuestions(documentQuestions);
-
-      console.log('Fetched Scheme Questions: ', schemeQuestions);
-      console.log('Fetched Document Questions: ', documentQuestions);
       
-      await fetchQuestions([...schemeQuestions, ...documentQuestions]);
+      const allQuestions = [...schemeQuestions, ...documentQuestions];
+      const questionsData = await fetchQuestions(allQuestions);
+      setQuestions(questionsData);
     } catch (error) {
-      console.error('Error fetching schemes or documents: ', error);
-    }
-  };
-
-  const fetchQuestions = async (allQuestions) => {
-    const questionIds = [...new Set(allQuestions.map(q => q.question))];
-    console.log('Fetching question data for IDs: ', questionIds);
-    
-    try {
-      const questionQuery = await firestore().collection('MemberQuestions').where(firestore.FieldPath.documentId(), 'in', questionIds).get();
-      const questions = questionQuery.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      const optionPromises = questions.flatMap(question => question.ConceptOptions ? question.ConceptOptions.map(optionId =>
-        firestore().collection('Options').doc(optionId).get()
-      ) : []);
-
-      const optionDocs = await Promise.all(optionPromises);
-      const options = optionDocs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      questions.forEach(question => {
-        question.options = question.ConceptOptions ? question.ConceptOptions.map(optionId => {
-          const foundOption = options.find(o => o.id === optionId);
-          return {
-            id: optionId,
-            name: foundOption ? foundOption.Name : 'Unknown'
-          };
-        }) : [];
-      });
-
-      allQuestions.forEach(item => {
-        if (item.TypeOfMCQ) {
-          questions.forEach(q => {
-            if (q.id === item.question) {
-              q.TypeOfMCQ = item.TypeOfMCQ;
-              console.log("checking", q);
-            }
-          });
-        }
-      });
-
-      setQuestions(questions);
-      console.log('Fetched Questions with Options: ', questions);
-    } catch (error) {
-      console.error('Error fetching questions: ', error);
+      console.error('Error fetching schemes, documents or questions: ', error);
     }
   };
 
   const handleAnswerSelect = (questionId, optionId, type) => {
-    console.log(type);
-    console.log(optionId);
-    console.log(questionId);
-
     setAnswers(prevAnswers => {
       const updatedAnswers = { ...prevAnswers };
       if (type === 'multiple') {
-        if (!updatedAnswers[questionId]) {
-          updatedAnswers[questionId] = [];
-        }
+        if (!updatedAnswers[questionId]) updatedAnswers[questionId] = [];
         if (updatedAnswers[questionId].includes(optionId)) {
           updatedAnswers[questionId] = updatedAnswers[questionId].filter(id => id !== optionId);
         } else {
@@ -256,7 +160,7 @@ const showDatepicker = () => {
   const handleNumberInput = (questionId, value) => {
     setAnswers(prevAnswers => ({
       ...prevAnswers,
-      [questionId]: [value] // Storing value as an array to be consistent with other answer types
+      [questionId]: [value]
     }));
   };
 
@@ -307,31 +211,28 @@ const showDatepicker = () => {
             {
               text: 'Update',
               onPress: async () => {
-                setLoading(true); // Show loader while fetching data
+                setLoading(true);
                 try {
-                  // Fetch the existing answers to pre-fill
                   const memberDoc = memberSnapshot.docs[0];
                   const existingAnswers = memberDoc.data().QuestionAnswers || [];
                   const prefilledAnswers = {};
                   existingAnswers.forEach(answer => {
-                    // Check if answer is a number-type question or MCQ
                     if (Array.isArray(answer.selectedOptions) && answer.selectedOptions.length > 0) {
                       const isNumber = !isNaN(answer.selectedOptions[0]);
                       prefilledAnswers[answer.id] = isNumber
-                        ? answer.selectedOptions // Directly set the answer
+                        ? answer.selectedOptions
                         : answer.selectedOptions.map(option => option.id);
                     }
                   });
                   setAnswers(prefilledAnswers);
   
-                  // Proceed to fetch schemes and documents
-                  await fetchSchemesAndDocuments(programData.schemes, programData.documents);
+                  await loadSchemesDocumentsQuestions(programData.schemes, programData.documents);
                   setShowModal(true);
                 } catch (fetchError) {
                   console.error('Error fetching data for update:', fetchError);
                   Alert.alert('Error fetching data. Please try again.');
                 } finally {
-                  setLoading(false); // Stop loading after fetching
+                  setLoading(false);
                 }
               },
             },
@@ -339,240 +240,62 @@ const showDatepicker = () => {
           { cancelable: true }
         );
       } else {
-        await fetchSchemesAndDocuments(programData.schemes, programData.documents);
+        await loadSchemesDocumentsQuestions(programData.schemes, programData.documents);
         setShowModal(true);
       }
     } catch (error) {
       console.error('Error checking member existence or fetching schemes and documents: ', error);
       Alert.alert('Error checking member existence or fetching schemes and documents. Please try again.');
-      setLoading(false);
     } finally {
       setLoading(false);
     }
   };
   
   
-  
 
-  const checkEligibility = async () => {
+  
+  const checkEligibility = async () => { 
+    setLoading(true);
+    // console.log('CheckEligibility',CHECK_ELIGIBLITY)
     try {
-      let newMemberData = {
-        aadhar: lastFourDigits,
-        phone: phoneNumber,
-        name: name,
-      };
-  
-      // Use this variable to store the final Family ID (existing or newly created)
-      let familyIdToUse = selectedFamilyId; // Default to existing selected family
-  
-      // If creating a new family, first create the family in Firestore
-      if (isCreatingNewFamily && newFamilyName) {
-        const newFamilyRef = await firestore().collection('Family').add({
-          FamilyName: newFamilyName,
-          MemberAadharList: [],
-          MemberIds: [],
-          MemberNames: [],
-          MemberPhoneNumbers: [],
-          ProgramId: userData.ProgramId,
-        });
-        familyIdToUse = newFamilyRef.id; // Store the newly created family ID
-      }
-  
-      function haveCommonItems(arr1, arr2) {
-        const set1 = new Set(arr1);
-        const commonItems = arr2?.filter(item => set1.has(item));
-        return commonItems?.length > 0;
-      }
-  
-      let eligibleSchemes = [];
-      let eligibleDocuments = [];
-      let eligibleSchemesDetails = [];
-      let eligibleDocumentsDetails = [];
-  
-      // Check eligibility for schemes
-      schemes.forEach((scheme) => {
-        let bool = true; // Reset bool for each scheme
-  
-        if (scheme.schemeQuestions) {
-          scheme.schemeQuestions.forEach((SQ) => {
-            let existingQuestion = answers[SQ.question];
-  
-            if (SQ.option?.Operation) {
-              const answerValue = Number(existingQuestion);
-              const inputValue = Number(SQ.option.inputValue[0]);
-  
-              switch (SQ.option.Operation) {
-                case '==':
-                  if (inputValue !== answerValue) bool = false;
-                  break;
-                case '!=':
-                  if (inputValue === answerValue) bool = false;
-                  break;
-                case '>':
-                  if (answerValue <= inputValue) bool = false;
-                  break;
-                case '<':
-                  if (answerValue >= inputValue) bool = false;
-                  break;
-                case '>=':
-                  if (answerValue < inputValue) bool = false;
-                  break;
-                case '<=':
-                  if (answerValue > inputValue) bool = false;
-                  break;
-                case 'between':
-                  const [min, max] = SQ.option.inputValue.map(Number);
-                  if (answerValue < min || answerValue > max) bool = false;
-                  break;
-                default:
-                  break;
-              }
-            } else if (!SQ.option?.Operation && !haveCommonItems(SQ.option?.options || SQ.option, existingQuestion)) {
-              bool = false;
-            }
-          });
-        }
-  
-        if (bool) {
-          eligibleSchemes.push({ id: scheme.id, name: scheme.Name });
-          eligibleSchemesDetails.push(scheme);
-        }
+      const response = await apiPost(CHECK_ELIGIBLITY, {
+        name,
+        phoneNumber,
+        lastFourDigits,
+        dob,
+        answers,
+        questions,
+        schemes,
+        documents,
+        programData,
+        userData,
+        location,
+        selectedFamilyId,
+        isCreatingNewFamily,
+        newFamilyName
       });
-  
-      // Check eligibility for documents
-      documents.forEach((document) => {
-        let bool = true; // Reset bool for each document
-        if (document.schemeQuestions) {
-          document.schemeQuestions.forEach((DQ) => {
-            let existingQuestion = answers[DQ.question];
-  
-            if (DQ.option?.Operation) {
-              const answerValue = Number(existingQuestion);
-              const inputValue = Number(DQ.option.inputValue[0]);
-  
-              switch (DQ.option.Operation) {
-                case '==':
-                  if (inputValue !== answerValue) bool = false;
-                  break;
-                case '!=':
-                  if (inputValue === answerValue) bool = false;
-                  break;
-                case '>':
-                  if (answerValue <= inputValue) bool = false;
-                  break;
-                case '<':
-                  if (answerValue >= inputValue) bool = false;
-                  break;
-                case '>=':
-                  if (answerValue < inputValue) bool = false;
-                  break;
-                case '<=':
-                  if (answerValue > inputValue) bool = false;
-                  break;
-                case 'between':
-                  const [min, max] = DQ.option.inputValue.map(Number);
-                  if (answerValue < min || answerValue > max) bool = false;
-                  break;
-                default:
-                  break;
-              }
-            } else if (!DQ.option?.Operation && !haveCommonItems(DQ.option?.options || DQ.option, existingQuestion)) {
-              bool = false;
-            }
-          });
-        }
-  
-        if (bool) {
-          eligibleDocuments.push({ id: document.id, name: document.Name });
-          eligibleDocumentsDetails.push(document);
-        }
-      });
-  
-      const formattedAnswers = questions.map(q => ({
-        id: q.id,
-        conceptName: q.ConceptName,
-        selectedOptions: q.ConceptType === 'Number'
-          ? (answers[q.id] && answers[q.id][0] !== undefined ? [answers[q.id][0]] : [''])
-          : (answers[q.id] || []).map(optionId => {
-            const option = q.options.find(o => o.id === optionId);
-            return { id: optionId, name: option ? option.name : 'Unknown' };
-          })
-      }));
-  
-      let normalizedName = name.toLowerCase();
-      const membersRef = firestore().collection('Members');
-      const memberQuery = membersRef
-        .where('AadharlastFourDigits', '==', lastFourDigits)
-        .where('normalizedName', '==', normalizedName)
-        .where('ProgramId', '==', userData.ProgramId);
-      const memberSnapshot = await memberQuery.get();
-  
-      let memberId;
-      if (!memberSnapshot.empty) {
-        const memberDoc = memberSnapshot.docs[0];
-        memberId = memberDoc.id;
-        await memberDoc.ref.update({
-          QuestionAnswers: formattedAnswers,
-          eligibleSchemes: eligibleSchemes,
-          eligibleDocuments: eligibleDocuments,
-          phoneNumber: phoneNumber,
-          dob: dob,
-          FamilyId: familyIdToUse, // Use the correct family ID
-          location: location,
-          mpName: programData?.MpName,
-          mpName_Hindi: programData?.MpName_Hindi,
-          createdBy_userId: userId,
-          
-        });
-  
-      } else {
-        const newMemberRef = await membersRef.add({
+      
+      // Check for response.ok and parse JSON data accordingly
+      const data = await response.json();
+      if (response.ok) {
+        Alert.alert('Data saved successfully!');
+        navigation.navigate('EligibleDocumentSchemes', {
+          eligibleSchemesDetails: data.eligibleSchemesDetails,
+          eligibleDocumentsDetails: data.eligibleDocumentsDetails,
           name,
-          normalizedName: name.toLowerCase(),
-          phoneNumber,
-          dob,
-          AadharlastFourDigits: lastFourDigits,
-          ProgramId: userData.ProgramId,
-          QuestionAnswers: formattedAnswers,
-          eligibleSchemes: eligibleSchemes,
-          eligibleDocuments: eligibleDocuments,
-          FamilyId: familyIdToUse, // Use the correct family ID
-          location: location,
-          mpName: programData?.MpName,
-          mpName_Hindi: programData?.MpName_Hindi,
-          createdBy_userId: userId,
-        });
-        memberId = newMemberRef.id;
-      }
-  
-      const familyRef = firestore().collection('Family').doc(familyIdToUse);
-      const familySnapshot = await familyRef.get();
-      let existingFamilyData = familySnapshot.data();
-  
-      // Check if Aadhaar is already in MemberAadharList
-      if (!existingFamilyData.MemberAadharList.includes(lastFourDigits)) {
-        // If Aadhaar doesn't already exist, add the member data
-  
-        // Manual handling of MemberNames to allow same names
-        let updatedMemberNames = [...existingFamilyData.MemberNames, name];
-  
-        await familyRef.update({
-          MemberAadharList: firestore.FieldValue.arrayUnion(lastFourDigits),
-          MemberIds: firestore.FieldValue.arrayUnion(memberId),
-          MemberNames: updatedMemberNames, // Directly updating the name array to allow duplicates
-          MemberPhoneNumbers: firestore.FieldValue.arrayUnion(phoneNumber),
+          phoneNumber
         });
       } else {
-        console.log('Aadhaar number already exists in the family.');
+        Alert.alert(data.error || 'Error checking eligibility and saving data');
       }
-  
-      navigation.navigate('EligibleDocumentSchemes', { eligibleSchemesDetails, eligibleDocumentsDetails, name, phoneNumber });
-      Alert.alert('Data saved successfully!');
-  
     } catch (error) {
-      console.error('Error checking eligibility and saving data: ', error);
+      console.error('Error:', error);
+      Alert.alert('Error checking eligibility and saving data. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
+
   
   
   return (
