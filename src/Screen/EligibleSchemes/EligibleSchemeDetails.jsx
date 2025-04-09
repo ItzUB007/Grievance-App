@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { Picker } from '@react-native-picker/picker';
+import { fetchSchemeDetails, fetchQuestions, fetchDocuments } from '../../utils/dbServices/schemedocumentService';
 
 const EligibleSchemeDetails = ({ route }) => {
   const { schemeDetails, schemeId } = route.params;
@@ -10,125 +11,39 @@ const EligibleSchemeDetails = ({ route }) => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(!schemeDetails);
   const [language, setLanguage] = useState('English'); // Default language
-  const [alertShown, setAlertShown] = useState(false);
+  // const [alertShown, setAlertShown] = useState(false);
   const [languageAvailable, setLanguageAvailable] = useState(true);
 
 
   useEffect(() => {
-    const fetchSchemeDetails = async () => {
-      if (!schemeDetails && schemeId) {
+    const fetchDetails = async () => {
+     
         setLoading(true);
         try {
-          const schemeDoc = await firestore().collection('Schemes').doc(schemeId).get();
-          if (schemeDoc.exists) {
-            const schemeData = schemeDoc.data();
-            setScheme(schemeData);
-            await fetchQuestions(schemeData.schemeQuestions);
-            await fetchDocuments(schemeData.schemeDocumentQuestions);
+          let schemeData = schemeDetails;
+          if (!schemeDetails && schemeId) {
+             schemeData = await fetchSchemeDetails(schemeId);
+                   setScheme(schemeData);
+          if (schemeData) {
+               const fetchedQuestions = await fetchQuestions(schemeData.schemeQuestions);
+                     setQuestions(fetchedQuestions);
+                     const fetchedDocuments = await fetchDocuments(schemeData.schemeDocumentQuestions);
+                     setDocuments(fetchedDocuments);
           } else {
             Alert.alert('Error', 'Scheme not found.');
           }
-        } catch (error) {
+        } } catch (error) {
           console.error('Error fetching scheme details: ', error);
           Alert.alert('Error', 'Failed to fetch scheme details.');
         } finally {
           setLoading(false);
         }
-      } else {
-        await fetchQuestions(schemeDetails.schemeQuestions);
-        await fetchDocuments(schemeDetails.schemeDocumentQuestions);
-      }
+      
     };
 
-    const fetchQuestions = async (schemeQuestions) => {
-      if (Array.isArray(schemeQuestions)) {
-        try {
-          const fetchedQuestions = await Promise.all(
-            schemeQuestions.map(async (schemeQuestion) => {
-              const questionDoc = await firestore().collection('MemberQuestions').doc(schemeQuestion.question).get();
-              const questionData = questionDoc.data();
-              let correctOptions = [];
-              const operation = schemeQuestion.option.Operation;
-              const inputValue = schemeQuestion?.option?.inputValue;
+  
 
-              if (schemeQuestion.option.options) {
-                const nestedOptionDocs = await Promise.all(
-                  schemeQuestion.option.options.map(async (nestedOptionId) => {
-                    const nestedOptionDoc = await firestore().collection('Options').doc(nestedOptionId).get();
-                    return nestedOptionDoc.data();
-                  })
-                );
-                correctOptions = nestedOptionDocs;
-              } else if (Array.isArray(schemeQuestion.option)) {
-                const correctOptionDocs = await Promise.all(
-                  schemeQuestion.option.map(async (optionId) => {
-                    const optionDoc = await firestore().collection('Options').doc(optionId).get();
-                    return optionDoc.data();
-                  })
-                );
-                correctOptions = correctOptionDocs;
-              }
-
-              return {
-                question: questionData?.ConceptName,
-                questionType: questionData?.ConceptType,
-                options: correctOptions.map(option => {
-                  if (option.nestedOptions) {
-                    return {
-                      name: option.Name,
-                      nestedOptions: option.nestedOptions.map(nestedOption => nestedOption.Name),
-                    };
-                  }
-                  return option.Name;
-                }),
-                operation,
-                inputValue
-              };
-            })
-          );
-          setQuestions(fetchedQuestions);
-          console.log('QuestionData', fetchedQuestions);
-        } catch (error) {
-          console.error('Error fetching questions: ', error);
-          Alert.alert('Error', 'Failed to fetch questions.');
-        }
-      }
-    };
-
-    const fetchDocuments = async (schemeDocumentQuestions) => {
-      if (Array.isArray(schemeDocumentQuestions)) {
-        try {
-          const fetchedDocuments = await Promise.all(
-            schemeDocumentQuestions.map(async (docQuestion) => {
-              const documentQuestionDoc = await firestore().collection('DocumentQuestions').doc(docQuestion.documentQuestion).get();
-              const documentQuestionData = documentQuestionDoc.data();
-
-              const documentIdsData = await Promise.all(
-                docQuestion.documentIds.map(async (documentId) => {
-                  const documentDoc = await firestore().collection('Documents').doc(documentId).get();
-                  return documentDoc.data();
-                })
-              );
-
-              return {
-                documentQuestionName: documentQuestionData?.Name,
-                documents: documentIdsData.map(docData => ({
-                  name: docData?.Name,
-                  required: docQuestion.required
-                })).filter(doc => doc.name) // Filter out undefined or null names
-              };
-            })
-          );
-
-          setDocuments(fetchedDocuments);
-        } catch (error) {
-          console.error('Error fetching documents: ', error);
-          Alert.alert('Error', 'Failed to fetch documents.');
-        }
-      }
-    };
-
-    fetchSchemeDetails();
+    fetchDetails();
   }, [schemeDetails, schemeId]);
 
  

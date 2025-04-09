@@ -38,6 +38,8 @@ import {
 } from 'react-native-responsive-dimensions';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { toggleSlider } from '../../../redux/features/sliderSlice';
+import { apiPost } from '../../utils/apiService';
+import { POST_TICKET } from '../../config/urls';
 
 
 
@@ -323,14 +325,14 @@ const PostScreen = () => {
 
     continueSubmission(selectedCategory);
   };
-
   const continueSubmission = async (category) => {
     try {
       const user = currentUser;
       const userEmail = user.email;
       const userId = user.uid;
       const createdOn = new Date();
-
+  
+      // Build ticket data object for submission
       const ticketData = {
         assigned_to: '',
         category: category,
@@ -350,55 +352,50 @@ const PostScreen = () => {
         gender: gender,
         dob: dob,
         state: state,
-        // city: city,
         location: location,
         AadharlastFourDigits: lastFourDigits,
         category_id: categories.find(cat => cat.categoryName === category)?.id || '',
         applicationMethod: applicationMethod,
         mpName: programData?.MpName,
         mpName_Hindi: programData?.MpName_Hindi,
-
-
+        ProgramId: userData.ProgramId,
+        userData: { uid: userId, email: userEmail, ProgramId: userData.ProgramId },
+       
+       
       };
-      if (ProgramId) {
-        ticketData.ProgramId = ProgramId;
-      }
 
-      let normalizedName = fullName.toLowerCase();
-      const ticketRef = await firestore().collection('Tickets').add(ticketData);
+      console.log('TicketData',ticketData)
+      console.log("Documents",documents)
 
-      // Check if a member with the same name and phone number exists
-      const membersRef = await firestore().collection('Members');
-      const memberQuery = membersRef.where('normalizedName', '==', normalizedName).where('AadharlastFourDigits', '==', lastFourDigits).where('ProgramId', '==', userData.ProgramId);
-      const memberSnapshot = await memberQuery.get();
+      //     if (documents) {
+      //   for (const doc of documents) {
+      //     console.log('Processing document:', doc);
+      //     if (!doc.uri) {
+      //       console.error('Document URI is undefined:', doc);
+      //       continue;
+      //     }
 
-      if (!memberSnapshot.empty) {
-        // Member exists, add the TicketId to the existing member's TicketId array
-        const memberDoc = memberSnapshot.docs[0];
-        await memberDoc.ref.update({
-          TicketId: firestore.FieldValue.arrayUnion(ticketRef.id),
-          createdBy_userId: userId,
-        });
-      } else {
-        // Member does not exist, create a new member document
-        await membersRef.add({
-          name: fullName,
-          normalizedName,
-          dob: dob,
-          location: location,
-          phoneNumber: phoneNo,
-          TicketId: [ticketRef.id],
-          ProgramId: userData.ProgramId,
-          AadharlastFourDigits: lastFourDigits,
-          mpName: programData?.MpName,
-          mpName_Hindi: programData?.MpName_Hindi,
-          createdBy_userId: userId,
+      //     const filePath = await getRealPathFromURI(doc.uri);
+      //     if (!filePath) {
+      //       console.error('Failed to get real path for URI:', doc.uri);
+      //       continue;
+      //     }
 
-        });
-      }
+      //     const fileData = await RNFS.readFile(filePath, 'base64');
+      //     ticketData.attachments.push({
+      //       file_name: doc.docName,
+      //       fileType: doc.type,
+      //       file_base64: fileData,
+      //     })
+      //   }
+      // }
 
+      const response = await apiPost(POST_TICKET, ticketData);
+      const data = await response.json();
+      console.log('Responce :', data.ticketId);
+      if (response.ok) {
 
-      if (documents) {
+              if (documents) {
         for (const doc of documents) {
           console.log('Processing document:', doc);
           if (!doc.uri) {
@@ -413,27 +410,31 @@ const PostScreen = () => {
           }
 
           const fileData = await RNFS.readFile(filePath, 'base64');
-          const fileRef = storage().ref(`documents/${ticketRef.id}/${Date.now()}_${doc.docName}`);
+          const fileRef = storage().ref(`documents/${data.ticketId}/${Date.now()}_${doc.docName}`);
           await fileRef.putString(fileData, 'base64', { contentType: doc.type });
           const filePathUrl = await fileRef.getDownloadURL();
-          await firestore().collection('Tickets').doc(ticketRef.id).collection('Attachments').add({
+          await firestore().collection('Tickets').doc(data.ticketId).collection('Attachments').add({
             file_name: doc.docName,
             file_path: filePathUrl,
           });
         }
 
 
+       }
+        Alert.alert('Ticket submitted successfully!');
+        resetForm();
+      } else {
+        Alert.alert(data.error || 'Error submitting ticket');
       }
-
-      setLoading(false);
-      Alert.alert('Ticket submitted successfully!');
-      resetForm();
     } catch (error) {
-      setLoading(false);
       console.error('Error submitting ticket: ', error);
       Alert.alert('Error submitting ticket. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
+
+
 
   const resetForm = () => {
     setSelectedCategory('');

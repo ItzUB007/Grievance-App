@@ -1,7 +1,9 @@
+// AddMembersToFamily.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, TextInput } from 'react-native';
-import firestore from '@react-native-firebase/firestore';
 import Icon from 'react-native-vector-icons/Ionicons';
+// Import the familyService functions
+import { fetchMembers, updateFamilyMembers } from '../../utils/dbServices/familyService';
 
 export default function AddMembersToFamily({ navigation, route }) {
   const [members, setMembers] = useState([]);
@@ -14,27 +16,20 @@ export default function AddMembersToFamily({ navigation, route }) {
   const { family } = route.params; // Receive current family data
 
   useEffect(() => {
-    fetchMembers();
+    loadMembers();
   }, []);
 
   useEffect(() => {
     setFilteredMembers(members); // Initialize filtered members with all members
   }, [members]);
 
-  const fetchMembers = async () => {
+  const loadMembers = async () => {
     try {
-      const membersRef = firestore().collection('Members');
-      const memberSnapshot = await membersRef.where('ProgramId', '==', family.ProgramId).get();
-
-      const membersList = memberSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
+      const membersList = await fetchMembers(family.ProgramId);
+      // Determine already selected members based on family.MemberIds
       const initiallySelected = membersList
         .filter(member => family.MemberIds.includes(member.id))
         .map(member => member.id);
-
       setMembers(membersList);
       setFilteredMembers(membersList);
       setSelectedMembers(initiallySelected);
@@ -55,47 +50,12 @@ export default function AddMembersToFamily({ navigation, route }) {
 
   const addSelectedMembersToFamily = async () => {
     try {
-      const familyRef = firestore().collection('Family').doc(family.id);
-      const updatedMemberNames = [];
-      const updatedMemberAadharList = [];
-      const updatedMemberPhoneNumbers = [];
-
-      const newMembers = selectedMembers.filter(id => !family.MemberIds.includes(id));
-      const removedMembers = family.MemberIds.filter(id => !selectedMembers.includes(id));
-
-      selectedMembers.forEach(memberId => {
-        const member = members.find(m => m.id === memberId);
-        if (member) {
-          updatedMemberNames.push(member.name);
-          updatedMemberAadharList.push(member.AadharlastFourDigits);
-          updatedMemberPhoneNumbers.push(member.phoneNumber);
-        }
-      });
-
-      await familyRef.update({
-        MemberNames: updatedMemberNames,
-        MemberAadharList: updatedMemberAadharList,
-        MemberPhoneNumbers: updatedMemberPhoneNumbers,
-        MemberIds: selectedMembers
-      });
-
-      const addFamilyIdToMember = async (memberId) => {
-        const memberRef = firestore().collection('Members').doc(memberId);
-        await memberRef.update({ FamilyId: family.id });
-      };
-
-      const removeFamilyIdFromMember = async (memberId) => {
-        const memberRef = firestore().collection('Members').doc(memberId);
-        await memberRef.update({ FamilyId: "" });
-      };
-
-      await Promise.all(newMembers.map(addFamilyIdToMember));
-      await Promise.all(removedMembers.map(removeFamilyIdFromMember));
-
+      await updateFamilyMembers(family, selectedMembers, members);
       alert('Family members updated successfully!');
       navigation.goBack();
     } catch (error) {
       console.error('Error updating family members: ', error);
+      alert('Error updating family members. Please try again.');
     }
   };
 
@@ -136,7 +96,6 @@ export default function AddMembersToFamily({ navigation, route }) {
       </View>
     );
   }
-
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Add Members to Family: {family.FamilyName}</Text>

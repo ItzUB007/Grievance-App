@@ -1,8 +1,20 @@
+// CreateFamily.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  ScrollView, 
+  Alert 
+} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import Icon from 'react-native-vector-icons/Ionicons'; // Importing the Icon component
+import Icon from 'react-native-vector-icons/Ionicons';
+
+// Import the createFamily function from familyService
+import { createFamily } from '../../utils/dbServices/familyService';
 
 export default function CreateFamily({ navigation, route }) {
   const { members } = route.params;
@@ -32,51 +44,12 @@ export default function CreateFamily({ navigation, route }) {
       Alert.alert('Please enter a family name and select at least one member.');
       return;
     }
-
-    const selectedMembersData = members.filter(member => selectedMembers.includes(member.id));
-    const memberAadharList = selectedMembersData.map(member => member.AadharlastFourDigits);
-    const memberNames = selectedMembersData.map(member => member.name);
-    const memberPhoneNumbers = selectedMembersData.map(member => member.phoneNumber);
-
-    const familyData = {
-      FamilyName: familyName,
-      MemberIds: selectedMembers,
-      MemberAadharList: memberAadharList,
-      ProgramId: ProgramId,
-      MemberNames: memberNames,
-      MemberPhoneNumbers: memberPhoneNumbers,
-    };
-
+    
     try {
-      // Create the family document
-      const familyRef = await firestore().collection('Family').add(familyData);
-      const familyId = familyRef.id;
-
-      // Update FamilyId for selected members
-      const updateMemberFamilyId = async (member) => {
-        const memberRef = firestore().collection('Members').doc(member.id);
-        const memberDoc = await memberRef.get();
-
-        if (memberDoc.exists) {
-          const memberData = memberDoc.data();
-
-          // Check if a FamilyId already exists, and update if needed
-          if (memberData.FamilyId && memberData.FamilyId !== "") {
-            // If the member already has a FamilyId, you may decide how to handle it
-            // For now, we are overwriting the FamilyId with the new one
-            await memberRef.update({ FamilyId: familyId });
-          } else {
-            // If no FamilyId exists, set the new FamilyId
-            await memberRef.update({ FamilyId: familyId });
-          }
-        }
-      };
-
-      // Run the FamilyId update for all selected members
-      await Promise.all(selectedMembersData.map(member => updateMemberFamilyId(member)));
-
+      const familyId = await createFamily(familyName, selectedMembers, members, ProgramId);
+      console.log('FamilyId',familyId)
       Alert.alert('Family created and members updated successfully!');
-      navigation.navigate('ViewFamily');
+      navigation.navigate('ViewFamily', { familyId });
     } catch (error) {
       console.error('Error creating family: ', error);
       Alert.alert('Failed to create family.');
@@ -113,17 +86,18 @@ export default function CreateFamily({ navigation, route }) {
 
   const startIndex = currentPage * pageSize;
   const currentMembers = filteredMembers.slice(startIndex, startIndex + pageSize);
-
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Create a Family</Text>
 
       <View style={styles.searchContainer}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput,{color:'black'}]}
           placeholder="Search Members"
           value={searchQuery}
+          placeholderTextColor={'gray'}
           onChangeText={setSearchQuery}
+      
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
@@ -135,8 +109,9 @@ export default function CreateFamily({ navigation, route }) {
         </TouchableOpacity>
       </View>
       <TextInput
-        style={styles.input}
+        style={[styles.input,{color:'black'}]}
         placeholder="Enter Family Name"
+        placeholderTextColor={'gray'}
         value={familyName}
         onChangeText={setFamilyName}
       />
