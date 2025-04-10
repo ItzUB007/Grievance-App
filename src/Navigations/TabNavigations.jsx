@@ -4,7 +4,7 @@ import HomeStackNavigator from './HomeStackNavigation'; // Import the HomeStackN
 import AboutScreen from '../Screen/AboutScreen/AboutScreen';
 import ProfileScreen from '../Screen/ProfileScreen/ProfileScreen';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-
+import { responsiveFontSize } from 'react-native-responsive-dimensions';
 import { Text, StyleSheet, View } from 'react-native';
 import NotificationScreen from '../Screen/NotificationScreen/Notification';
 
@@ -46,9 +46,9 @@ const TabNavigations = () => {
       })}
     >
       <Tab.Screen name="Home" component={HomeStackNavigator} options={{ headerShown: false }} />
-      <Tab.Screen name="Search" component={AboutScreen} />
-      <Tab.Screen name="Notifications" component={NotificationScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Search" component={AboutScreen} options={{headerTintColor:'#EA3838'}}/>
+      <Tab.Screen name="Notifications" component={NotificationScreen} options={{headerTintColor:'#EA3838'}} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{headerTintColor:'#EA3838'}}/>
       
     </Tab.Navigator>
   );

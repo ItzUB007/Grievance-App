@@ -18,6 +18,8 @@ import colors from '../../styles/colors';
 import { apiPost } from '../../utils/apiService';
 import { CHECK_ELIGIBLITY } from '../../config/urls';
 import { fetchFamilies,fetchSchemesAndDocuments, fetchQuestions } from '../../utils/dbServices/AddaMemberService';
+import { width } from '../../styles/responsiveSize';
+import * as Progress from 'react-native-progress';
 
 
 
@@ -307,7 +309,7 @@ export default function AddaMember({ navigation }) {
       ) : (
         <View style={styles.container}>
           {/* Dropdown for Selecting or Creating a Family */}
-          <Text style={styles.label}>Select or Create Family</Text>
+          <Text style={styles.label}>Select  Family</Text>
           <View style={styles.pickerinput}>
           <Picker
             selectedValue={isCreatingNewFamily ? 'create' : 'select'}
@@ -410,7 +412,7 @@ export default function AddaMember({ navigation }) {
             placeholder="Full Name"
             value={name}
             onChangeText={setName}
-            style={styles.input}
+            style={[styles.input, {marginTop : responsiveWidth(5)}]}
             placeholderTextColor="gray"
             editable={manualEntry} // Disable unless manualEntry is true
           />
@@ -456,7 +458,7 @@ export default function AddaMember({ navigation }) {
           />
 
           <TouchableOpacity style={styles.proceedButton} onPress={handleSubmit}>
-            <Text style={styles.proceedButtonText}>PROCEED</Text>
+            <Text style={styles.proceedButtonText}>Proceed</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -464,7 +466,7 @@ export default function AddaMember({ navigation }) {
   )}
   {loading && (
     <View style={styles.loaderContainer}>
-      <ActivityIndicator size="large" color="#0000ff" />
+      <ActivityIndicator size="large" color={colors.themered} />
     </View>
   )}
 
@@ -482,6 +484,7 @@ export default function AddaMember({ navigation }) {
                 : '' // Default to an empty string if undefined
             }
             placeholder="Enter Your Answer"
+            placeholderTextColor={colors.greyTheme}
             onChangeText={(value) => handleNumberInput(questions[currentQuestionIndex].id, value)}
           />
         ) : (
@@ -501,24 +504,32 @@ export default function AddaMember({ navigation }) {
       </View>
 
       <View style={styles.navigationButtons}>
-        {currentQuestionIndex > 0 && (
-          <Button
-            title="Previous"
-            onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex - 1)}
-          />
-        )}
-        {currentQuestionIndex < questions.length - 1 ? (
-          <Button
-            title="Next"
-            onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex + 1)}
-          />
-        ) : (
-          <Button
-            title="Submit"
-            onPress={checkEligibility}
-          />
-        )}
-      </View>
+  {currentQuestionIndex > 0 && (
+    <TouchableOpacity
+      style={styles.nvgBtn}
+      onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex - 1)}
+    >
+      <Text style={styles.nvgBtnText}>Previous</Text>
+    </TouchableOpacity>
+  )}
+
+  {currentQuestionIndex < questions.length - 1 ? (
+    <TouchableOpacity
+      style={styles.nvgBtn}
+      onPress={() => setCurrentQuestionIndex(prevIndex => prevIndex + 1)}
+    >
+      <Text style={styles.nvgBtnText}>Next</Text>
+    </TouchableOpacity>
+  ) : (
+    <TouchableOpacity
+      style={styles.nvgBtn}
+      onPress={checkEligibility}
+    >
+      <Text style={styles.nvgBtnText}>Submit</Text>
+    </TouchableOpacity>
+  )}
+</View>
+
     </ScrollView>
   )}
 </ScrollView>
@@ -530,15 +541,18 @@ export default function AddaMember({ navigation }) {
     scrollContainer: {
       flexGrow: 1,
       padding: 20,
+      // backgroundColor: colors.themewhite,
     },
     container: {
       flex: 1,
       padding: 20,
-      backgroundColor: '#fff',
+      backgroundColor: colors.themewhite,
+      borderRadius:width * 0.05
+      
     },
     label: {
       fontSize: 16,
-      color: '#333',
+      color: colors.greyHeading,
       marginBottom: 8,
     },
     input: {
@@ -554,7 +568,7 @@ export default function AddaMember({ navigation }) {
       color:'black'
     },
     inputText: {
-      color: '#333',
+      color: colors.greyHeading,
       fontSize: 16,
     },
     searchIcon: {
@@ -619,36 +633,39 @@ export default function AddaMember({ navigation }) {
       justifyContent: 'space-between',
       paddingHorizontal: 20,
       paddingVertical: 40,
-      backgroundColor: '#fff',
+      backgroundColor: colors.themered,
+      borderRadius: responsiveWidth(4),
     },
     questionContainer: {
       marginBottom: 20,
     },
     questionText: {
-      fontSize: 20,
-      marginBottom: 20,
-      color: 'black',
+      fontSize: responsiveFontSize(2.5),
+      marginBottom: responsiveWidth(40),
+      color: colors.themewhite,
       textAlign: 'center',
+      fontFamily: 'Montserrat-Bold',
     },
     optionButton: {
       padding: 10,
       backgroundColor: '#f0f0f0',
       marginBottom: 10,
-      borderRadius: 5,
+      borderRadius: responsiveWidth(3),
       alignItems: 'center',
     },
     selectedOption: {
-      backgroundColor: '#cce5ff',
+      backgroundColor: 'lightgreen',
     },
     optionText: {
-      fontSize: 16,
-      color: 'blue',
+      fontSize: responsiveFontSize(2),
+      color: colors.themered,
+       fontFamily: 'Montserrat-Regular',
     },
     numberInput: {
       borderWidth: 1,
       borderColor: 'grey',
       padding: 10,
-      borderRadius: 5,
+      borderRadius: responsiveWidth(4),
       backgroundColor: '#f0f0f0',
       color: 'black',
       textAlign: 'center',
@@ -658,12 +675,24 @@ export default function AddaMember({ navigation }) {
       justifyContent: 'space-between',
       marginTop: 40,
     },
+    nvgBtn : {
+      backgroundColor:'rgba(255, 255, 255, 0.23)',
+      opacity:0.8,
+      width:'25%',
+      textAlign:'center',
+      borderRadius: responsiveWidth(2),
+    },
+    nvgBtnText : {
+    color:colors.themewhite,
+    textAlign:'center',
+    padding:'3%'
+    },
     button: {
-      backgroundColor: '#3B82F6',
-      borderRadius: 8,
+      backgroundColor: colors.themered,
+      borderRadius: responsiveWidth(4),
       paddingVertical: 14,
       paddingHorizontal: 28,
-      marginVertical: 10,
+      marginVertical: 4,
       alignItems: 'center',
       elevation: 3, // Add shadow for Android
       shadowColor: '#000',
@@ -673,12 +702,13 @@ export default function AddaMember({ navigation }) {
     },
     buttonText: {
       color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: 'bold',
+      fontSize: responsiveFontSize(2),
+      fontWeight: '500',
+      
     },
     proceedButton: {
-      backgroundColor: '#3B82F6',
-      borderRadius: 8,
+      backgroundColor: colors.themered,
+      borderRadius: responsiveWidth(4),
       paddingVertical: 14,
       paddingHorizontal: 28,
       marginVertical: 20,
@@ -691,8 +721,8 @@ export default function AddaMember({ navigation }) {
     },
     proceedButtonText: {
       color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: 'bold',
+      fontSize: responsiveFontSize(2),
+      fontWeight: '500',
     },
     pickerIcon: {
       position: 'absolute',
@@ -702,7 +732,7 @@ export default function AddaMember({ navigation }) {
     },
     picker: {
       flex: 1,
-      color: 'black',
+      color: colors.greyHeading,
     },
     pickerinput: {
       borderWidth: 0.5,

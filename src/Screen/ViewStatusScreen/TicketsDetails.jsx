@@ -246,14 +246,20 @@ const TicketDetails = ({ route }) => {
   return (
     <ScrollView style={styles.container}>
       {ticketDetails && (
+        <View>
+          <View style={styles.detailsTop}></View>
+       
         <View style={styles.detailsContainer}>
-          <Text style={styles.detailText}>Category Applied: {ticketDetails.category}</Text>
+          
+          <Text style={styles.detailText}> {ticketDetails.category}</Text>
           <Text style={styles.detailText}>Full Name: {ticketDetails.fullName}</Text>
-          <Text style={styles.detailText}>Status: {ticketDetails.status}</Text>
+          
           <Text style={styles.detailText}>Phone No: {ticketDetails.phoneNo}</Text>
           <Text style={styles.detailText}>Created On: {ticketDetails.created_on}</Text>
           <Text style={styles.detailText}>Updated On: {ticketDetails.updated_on}</Text>
-          <Text style={styles.detailText}>Description: {ticketDetails.description}</Text>
+          <Text style={styles.detailText}>Description: {"\n"} {ticketDetails.description}</Text>
+          <Text style={styles.detailText}>Status: {ticketDetails.status}</Text>
+        </View>
         </View>
       )}
       <Text style={styles.attachmentHeader}>Attachments:</Text>
@@ -381,22 +387,31 @@ const TicketDetails = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9', // Light background for a modern feel
+    backgroundColor: colors.themewhite,
+    margin: '0 auto'
   },
   detailsContainer: {
-    backgroundColor: '#ffffff',
-    padding: 20,
-    margin: 10,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+  // borderWidth:0.4,
+  width:'90%',
+  alignSelf:'center',
+  padding:'8%'
+
   },
+   detailsTop : {
+      backgroundColor:colors.greyTheme,
+      borderTopRightRadius:responsiveWidth(3),
+      borderTopLeftRadius:responsiveWidth(3),
+      width:'90%',
+      alignSelf:'center',
+      height:'8%',
+      // paddingTop:responsiveWidth(1),
+      marginTop:responsiveWidth(3)
+     
+  
+    },
   detailText: {
     fontSize: 16,
-    marginBottom: 12,
+    // marginBottom: 12,
     color: '#4a4a4a',
   },
   attachmentHeader: {

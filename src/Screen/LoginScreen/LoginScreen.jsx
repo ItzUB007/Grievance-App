@@ -12,6 +12,12 @@ import React, { useState } from 'react';
 import auth from '@react-native-firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
+import colors from '../../styles/colors';
+import {
+  responsiveWidth,
+  responsiveHeight,
+  responsiveFontSize,
+} from 'react-native-responsive-dimensions';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,11 +42,10 @@ const LoginScreen = () => {
           firestore()
             .collection('users')
             .doc(uid)
-            .update({ emailVerified: true }) // Update emailVerified field
+            .update({ emailVerified: true })
             .then(() => {
               setLoading(false);
-              // Alert.alert('Login successfully!');
-              navigation.navigate('Home'); // Navigate to home screen
+              navigation.navigate('Home');
             });
         } else {
           setLoading(false);
@@ -60,59 +65,71 @@ const LoginScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome To Adhikar Grievance</Text>
-      <Text style={styles.signup}>Login Screen</Text>
-      <TextInput
-        placeholder="Enter Your Email"
-        style={styles.inputBox}
-        value={email}
-        onChangeText={value => setEmail(value)}
-        placeholderTextColor='black'
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      <TextInput
-        placeholder="Enter Your Password"
-        style={styles.inputBox}
-        value={password}
-        onChangeText={value => setPassword(value)}
-        placeholderTextColor='black'
-        secureTextEntry={true}
-      />
-      <TouchableOpacity onPress={onLogin} style={styles.register}>
-        {loading ? (
-          <ActivityIndicator size="small" color="#000" />
-        ) : (
-          <Text style={styles.registerTitle}>Login</Text>
-        )}
-      </TouchableOpacity>
+    <View style={styles.mainContainer}>
+      <View style={styles.container}>
+        <Text style={styles.signup}>Welcome To</Text>
+        <Text style={styles.title}>Adhikar Grievance</Text>
+
+        <TextInput
+          placeholder="Enter Your Email"
+          style={styles.inputBox}
+          value={email}
+          onChangeText={setEmail}
+          placeholderTextColor={colors.greyHeading}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+        <TextInput
+          placeholder="Enter Your Password"
+          style={styles.inputBox}
+          value={password}
+          onChangeText={setPassword}
+          placeholderTextColor={colors.greyHeading}
+          secureTextEntry
+        />
+
+        <TouchableOpacity onPress={onLogin} style={styles.register}>
+          {loading ? (
+            <ActivityIndicator size="small" color="#000" />
+          ) : (
+            <Text style={styles.registerTitle}>Login</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Background circle */}
+      <View style={styles.circle} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: colors.themered,
+    position:'relative'
+  },
   container: {
-    padding: width * 0.04,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    height: '100%',
-    backgroundColor: '#fff',
+    padding: responsiveWidth(4),
   },
   inputBox: {
-    borderWidth: 1,
-    borderColor: 'grey',
     paddingHorizontal: width * 0.03,
-    borderRadius: width * 0.04,
+    borderRadius: width * 0.07,
     width: '90%',
     marginTop: height * 0.02,
     color: 'black',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.themewhite,
     fontSize: width * 0.04,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    textAlign: 'center',
   },
   register: {
-    width: '90%',
-    backgroundColor: '#E53535',
+    width: '50%',
+    backgroundColor: '#c32c2c',
     paddingVertical: height * 0.015,
     borderRadius: width * 0.08,
     alignItems: 'center',
@@ -124,37 +141,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   signup: {
-    fontSize: width * 0.05,
-    color: '#000000',
-    fontWeight: '600',
-    marginBottom: height * 0.02,
+    color: '#ffffff',
+    fontWeight: '300',
+    fontFamily: 'Montserrat-Regular',
+    fontSize: responsiveFontSize(2.5),
   },
   title: {
-    fontSize: width * 0.06,
-    fontWeight: '600',
-    lineHeight: width * 0.065,
-    color: '#E53535',
+    fontSize: responsiveFontSize(3.5),
+    fontWeight: '700',
+    lineHeight: width * 0.072,
     marginBottom: height * 0.03,
+    color: '#ffffff',
+    fontFamily: 'Montserrat-Regular',
+  },
+  circle: {
+    position: 'absolute',
+    width: '100%',
+     height: '50%',
+    borderRadius: width * 0.60,
+    backgroundColor: colors.themewhite,
+    opacity: 0.1,
+    bottom: -115,
+    left: -120,
+    zIndex: -1,
   },
 });
 
 export default LoginScreen;
-
-
-
-
-
-  {/*  <TouchableOpacity
-        style={styles.linkContainer}
-        onPress={() => navigation.navigate('Register')}
-      >
-        <Text style={styles.registerLink}>Not Registered? Register here</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.phoneSignInButton}
-        onPress={() => navigation.navigate('PhoneSignIn')}
-      >
-        <Text style={styles.phoneSignInButtonText}>Sign In with Phone Number</Text>
-      </TouchableOpacity>
-      */}

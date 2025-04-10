@@ -162,18 +162,26 @@ const ViewStatusScreen = ({ navigation }) => {
       style={styles.ticketItem}
       onPress={() => navigation.navigate('TicketDetails', { ticketId: item.id })}
     >
-      <Text style={styles.categoryText}>Category: {item.category}</Text>
-      <Text style={styles.baseText}>Full Name: {item.fullName}</Text>
-      <Text style={[styles.baseText, getStatusStyle(item.status)]}>Status: {item.status}</Text>
+      <View style={styles.categoryContainer}>
+      <Text style={styles.categoryText}> {item.category}</Text>
+
+      </View>
+      
+       <View style={styles.ticketText}>
+       <Text style={styles.baseText}>Full Name: {item.fullName}</Text>
       <Text style={styles.baseText}>Phone No: {item.phoneNo}</Text>
       <Text style={styles.baseText}>Updated On: {new Date(item.updated_on.toDate()).toLocaleString()}</Text>
+      <Text style={[styles.statusText, getStatusStyle(item.status)]}>Status: {item.status}</Text>
+       </View>
+
+      
     </TouchableOpacity>
   );
 
   if (loading) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#6200ee" />
+        <ActivityIndicator size="large" color={colors.themered} />
       </View>
     );
   }  
@@ -199,35 +207,35 @@ const ViewStatusScreen = ({ navigation }) => {
           placeholder="Search Tickets"
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor={'black'}
+          placeholderTextColor={colors.greyHeading}
         />
-        {searchQuery ? (
-          <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-            <Icon name="close-circle" size={24} color="#6200ee" />
+        
+          <TouchableOpacity onPress={handleSearch} style={styles.clearButton}>
+            {/* <Icon name="close-circle" size={24} color="#6200ee" /> */}
+             <Icon  name="search-outline" size={24} color={colors.themered} />
           </TouchableOpacity>
-        ) : null}
-        <Button
-          title="Search"
-          onPress={handleSearch}
-          
-        />
+          {/* {searchQuery ? (
+             <TouchableOpacity onPress={handleSearch} style={styles.clearButton}>
+              <Icon name="close-circle" size={24} color="#6200ee" /> 
+           
+           </TouchableOpacity>
+        ) : null} */}
+       
       </View>
       <FlatList
         data={filteredTickets}
         keyExtractor={item => item.id}
         renderItem={renderTicketItem}
       />
-      <View style={styles.paginationButtons}>
-        <Button
-          title="Previous"
-          onPress={handlePrevPage}
-          disabled={currentPage === 0 || searching}
-        />
-        <Button
-          title="Next"
-          onPress={handleNextPage}
-          disabled={filteredTickets.length < pageSize || searching}
-        />
+      <View style={styles.paginationContainer}>
+      
+        <TouchableOpacity onPress={handlePrevPage} disabled={currentPage ===0 || searching} style={styles.paginationButtons}>
+         <Text style={styles.btnText}>  Previous</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleNextPage} disabled={currentPage ===0 || searching} style={styles.paginationButtons}>
+       <Text style={styles.btnText}> Next</Text> 
+        </TouchableOpacity>
+      
       </View>
     </View>
   );
@@ -236,8 +244,42 @@ const ViewStatusScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F0F0',
-    padding: 10,
+    backgroundColor: colors.themewhite,
+    // padding: 10,
+    justifyContent:'center',
+    // alignItems:'strech',
+    zIndex:1,
+    
+  },
+  ticketItem: {
+    width:'90%',
+    // padding:'5%',
+    alignSelf:'center',
+    backgroundColor:colors.themewhite,
+    borderRadius:responsiveWidth(2),
+    marginBottom:responsiveWidth(4),
+   
+    },
+  categoryContainer : {
+    backgroundColor:colors.greyTheme,
+    borderTopRightRadius:responsiveWidth(2),
+    borderTopLeftRadius:responsiveWidth(2),
+    alignItems:'flex-end',
+    justifyContent:'center',
+    paddingTop:responsiveWidth(1),
+    paddingBottom:responsiveWidth(1)
+   
+
+  },ticketText : {
+  padding:'5%'
+  },
+  categoryText: {
+    fontSize: responsiveFontSize(1.6),
+    marginRight:responsiveWidth(3),
+    fontWeight: '400',
+    // marginBottom: 5,
+    color: '#2c2a2a',
+    fontFamily: 'Montserrat-Bold',
   },
   title: {
     fontSize: responsiveFontSize(2), // Approx 15px
@@ -264,54 +306,72 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderRadius: 15,
     backgroundColor: '#FFF',
-    color: '#6200ee',
+    color: colors.themered,
   },
   clearButton: {
     position: 'absolute',
-    right: 80,
+    right: 20,
     padding: 10,
   },
-  ticketItem: {
-    padding: 20,
-    marginVertical: 8,
-    marginHorizontal: 10,
-    borderRadius: 10,
-    elevation: 0.5,
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: { width: 1, height: 1 },
+  statusText: {
+   width:'40%',
+   padding:responsiveWidth(1),
+   paddingTop:responsiveWidth(1),
+   paddingBottom:responsiveWidth(1),
+   borderRadius:responsiveWidth(3),
+   marginTop:responsiveWidth(4),
+   textAlign:'center',
+   fontFamily: 'Montserrat-Regular',
+   fontSize:responsiveFontSize(1.7)
   },
-  openStatus: {
-    color: '#FFD700', // Yellow color for open status
-  },
-  pendingStatus: {
-    color: '#FFA500', // Orange color for pending status
-  },
-  resolvedStatus: {
-    color: '#32CD32', // Green color for resolved status
-  },
-  rejectedStatus: {
-    color: '#FF4500', // Red color for rejected status
-  },
-  defaultStatus: {
-    color: 'blue', // Default color
-  },
-  categoryText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#333',
-  },
-  baseText: {
-    fontSize: 14,
-    color: '#555',
-  },
-  paginationButtons: {
+  paginationContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    margin: 10,
+    justifyContent: 'space-around',
+   backgroundColor:'transparen',
+    zIndex:-1,
+    margin:responsiveWidth(2),
+    
 
   },
+  paginationButtons : {
+    width:'20%',
+    backgroundColor:colors.themered,
+    padding:responsiveWidth(1),
+    borderRadius:responsiveWidth(3),
+    fontFamily: 'Montserrat-Regular',
+   fontSize:responsiveFontSize(1.7),
+   
+   
+  },
+  btnText : {
+    fontSize:responsiveFontSize(1.8),
+    textAlign:'center',
+
+  },
+ 
+  openStatus: {
+    backgroundColor: '#c5d94b', // Yellow color for open status
+  },
+  pendingStatus: {
+    backgroundColor: '#FFA500', // Orange color for pending status
+  },
+  resolvedStatus: {
+    backgroundColor: '#32CD32', // Green color for resolved status
+  },
+  rejectedStatus: {
+    backgroundColor: '#FF4500', // Red color for rejected status
+  },
+  defaultStatus: {
+    backgroundColor: 'blue', // Default color
+  },
+  
+  baseText: {
+    fontSize: responsiveFontSize(1.8),
+    color: '#555',
+    lineHeight:18
+  },
+ 
+ 
   loader: {
     flex: 1,
     justifyContent: 'center',
