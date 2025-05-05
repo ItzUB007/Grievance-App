@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
+import colors from '../../styles/colors';
 
 export default function ViewFamilyMembers({ route, navigation }) {
   const { family } = route.params; // family object with id
@@ -53,17 +54,18 @@ export default function ViewFamilyMembers({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Family Members: {familyData.FamilyName}</Text>
+      <Text style={styles.title}> {familyData.FamilyName}</Text>
       <View style={styles.table}>
         <View style={styles.tableHeader}>
           <Text style={[styles.tableCell, styles.headerCell]}>Name</Text>
-          <Text style={[styles.tableCell, styles.headerCell]}>Aadhaar No</Text>
+          <Text style={[styles.tableCell, styles.headerCell ]}> Aadhaar No </Text>
+
           <Text style={[styles.tableCell, styles.headerCell]}>Phone No</Text>
         </View>
         {familyData.MemberNames.map((name, index) => (
           <View key={index} style={styles.tableRow}>
             <Text style={styles.tableCell}>{name}</Text>
-            <Text style={styles.tableCell}>{familyData.MemberAadharList[index]}</Text>
+            <Text style={styles.tableCell}>{familyData.MemberAadharList[index]} </Text>
             <Text style={styles.tableCell}>{familyData.MemberPhoneNumbers[index]}</Text>
           </View>
         ))}
@@ -86,22 +88,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 24,
-    color: '#333',
+    color: colors.themered,
   },
   table: {
     width: '100%',
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderRadius: 10,
+
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#f1f1f1',
+    backgroundColor: '#ffffff',
     paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderRadius: 10,
+    
+
   },
   tableRow: {
     flexDirection: 'row',
@@ -117,24 +117,21 @@ const styles = StyleSheet.create({
   },
   headerCell: {
     fontWeight: 'bold',
-    backgroundColor: '#f7f7f7',
+    // backgroundColor: '#f7f7f7',
+    
   },
   addButton: {
-    backgroundColor: '#4CAF50',
-    padding: 15,
+    backgroundColor: colors.themered,
+    padding: 10,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
+   
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#ffffff',
+    fontSize: 14,
+   fontFamily:'Montserrat-Bold'
   },
   loaderContainer: {
     flex: 1,

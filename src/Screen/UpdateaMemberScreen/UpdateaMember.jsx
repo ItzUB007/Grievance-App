@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { ScrollView } from 'react-native-gesture-handler';
+import colors from '../../styles/colors';
+import { width } from '../../styles/responsiveSize';
 
 
 export default function UpdateaMember({ navigation }) {
@@ -46,7 +48,7 @@ export default function UpdateaMember({ navigation }) {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Update a Member</Text>
+      {/* <Text style={styles.title}>Update a Member</Text> */}
      
       <View style={styles.buttonContainer}>
         <TouchableOpacity
@@ -99,9 +101,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   viewMembersButton: {
-    backgroundColor: '#4CAF50', // Modern green color for the button
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: colors.themered, // Modern green color for the button
+    padding: 10,
+    borderRadius: width * 0.04,
+    fontFamily:'Montserrat-Bold',
     alignItems: 'center',
     marginTop: 20,
     marginBottom: 10,
@@ -112,9 +115,10 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   createFamilyButton: {
-    backgroundColor: '#6200ee',
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: colors.themered, // Modern green color for the button
+    padding: 10,
+    borderRadius: width * 0.04,
+    fontFamily:'Montserrat-Bold',
     alignItems: 'center',
     marginTop: 10,
     marginBottom: 10,
@@ -125,9 +129,10 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   viewFamilyButton: {
-    backgroundColor: '#2196F3', // Blue color for the View Family button
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: colors.themered, // Modern green color for the button
+    padding: 10,
+    borderRadius: width * 0.04,
+    fontFamily:'Montserrat-Bold',
     alignItems: 'center',
     marginTop: 10,
     marginBottom: 10,

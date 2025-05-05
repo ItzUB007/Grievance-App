@@ -24,6 +24,7 @@ import * as Progress from 'react-native-progress';
 
 
 
+
 export default function AddaMember({ navigation }) {
   const { programData, permissions, userData } = useAuth();
   const [name, setName] = useState('');
@@ -298,7 +299,7 @@ export default function AddaMember({ navigation }) {
     }
   };
 
-  
+  const progress = (currentQuestionIndex + 1) / questions.length;
   
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -473,6 +474,11 @@ export default function AddaMember({ navigation }) {
   {questions.length > 0 && (
     <ScrollView contentContainerStyle={styles.fullScreenQuestionContainer}>
       <View style={styles.questionContainer}>
+        <View style={styles.progressBar}>
+        <Progress.Bar progress={progress} width={250} color='#ffffff'/>
+
+        </View>
+     
         <Text style={styles.questionText}>{`${currentQuestionIndex + 1}. ${questions[currentQuestionIndex].ConceptName}`}</Text>
         {questions[currentQuestionIndex].ConceptType === 'Number' ? (
           <TextInput
@@ -549,6 +555,14 @@ export default function AddaMember({ navigation }) {
       backgroundColor: colors.themewhite,
       borderRadius:width * 0.05
       
+    }, 
+    progressBar: {
+      width:'100%',
+      marginBottom:width * 0.08,
+      borderRadius:width * 0.05,
+     
+      alignItems:"center"
+
     },
     label: {
       fontSize: 16,

@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  TextInput,
+  SafeAreaView,
+  StatusBar
+} from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import Icon from 'react-native-vector-icons/Ionicons'; // Importing the Icon component
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function ViewMembers({ navigation, route }) {
   const { members } = route.params;
@@ -9,10 +18,10 @@ export default function ViewMembers({ navigation, route }) {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize] = useState(10); // Number of members per page
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredMembers, setFilteredMembers] = useState(members || []); // Initialize with members from route.params
+  const [filteredMembers, setFilteredMembers] = useState(members || []);
 
   useEffect(() => {
-    setFilteredMembers(members); // Set filtered members initially
+    setFilteredMembers(members);
   }, [members]);
 
   const handleSearch = () => {
@@ -44,163 +53,233 @@ export default function ViewMembers({ navigation, route }) {
 
   const startIndex = currentPage * pageSize;
   const currentMembers = filteredMembers.slice(startIndex, startIndex + pageSize);
+  const totalPages = Math.ceil(filteredMembers.length / pageSize);
 
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#ea3838" />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>All Members</Text>
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search Members"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-            <Icon name="close-circle" size={24} color="#333" />
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.buttonText}>Search</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" />
+      
+      {/* Header */}
+      {/* <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+        >
+          <Icon name="chevron-back" size={24} color="#ea3838" />
         </TouchableOpacity>
-      </View>
-      <View style={styles.table}>
-        <View style={styles.tableHeader}>
-          <Text style={[styles.tableCell, styles.headerCell]}>Name</Text>
-          <Text style={[styles.tableCell, styles.headerCell]}>Aadhaar No</Text>
-          <Text style={[styles.tableCell, styles.headerCell]}>Phone No</Text>
-        </View>
-        {currentMembers.map((member, index) => (
-          <View key={index} style={styles.tableRow}>
-            <TouchableOpacity
-              style={styles.tableCell}
-              onPress={() => navigation.navigate('MemberDetails', { member: member })}
-            >
-              <Text style={styles.linkText}>{member.name}</Text>
+        <Text style={styles.headerTitle}>View Members</Text>
+      </View> */}
+      
+      <ScrollView style={styles.container}>
+        {/* Search Bar */}
+        <View style={styles.searchCard}>
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search Members"
+              placeholderTextColor="#979797"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+              <Text style={styles.searchButtonText}>Search </Text>
             </TouchableOpacity>
-            <Text style={styles.tableCell}>{member.AadharlastFourDigits}</Text>
-            <Text style={styles.tableCell}>{member.phoneNumber}</Text>
           </View>
-        ))}
-      </View>
-      <View style={styles.paginationContainer}>
-        <TouchableOpacity
-          style={styles.paginationButton}
-          onPress={handlePrevPage}
-          disabled={currentPage === 0}
-        >
-          <Text style={styles.buttonText}>Previous</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.paginationButton}
-          onPress={handleNextPage}
-          disabled={(currentPage + 1) * pageSize >= filteredMembers.length}
-        >
-          <Text style={styles.buttonText}>Next</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        </View>
+        
+        {/* Table */}
+        <View style={styles.tableCard}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableCell, styles.headerCell]}>Name</Text>
+            <Text style={[styles.tableCell, styles.headerCell ]}>Aadhar No</Text>
+            <Text style={[styles.tableCell, styles.headerCell]}>Phone No</Text>
+          </View>
+          
+          {currentMembers.map((member, index) => (
+            <View key={index} style={styles.tableRow}>
+              <TouchableOpacity
+                style={styles.tableCell}
+                onPress={() => navigation.navigate('MemberDetails', { member: member })}
+              >
+                <Text style={styles.cellText}>{member.name}</Text>
+              </TouchableOpacity>
+              <Text style={[styles.tableCell,{textAlign:"center"}]}>{member.AadharlastFourDigits}</Text>
+              <Text style={styles.tableCell}>{member.phoneNumber}</Text>
+            </View>
+          ))}
+          
+          {/* Pagination */}
+          <View style={styles.paginationContainer}>
+            <Text style={styles.pageInfo}>Page {currentPage + 1} of {totalPages}</Text>
+            <View style={styles.paginationButtons}>
+              <TouchableOpacity
+                style={[styles.paginationArrow, currentPage === 0 && styles.disabledButton]}
+                onPress={handlePrevPage}
+                disabled={currentPage === 0}
+              >
+                <Icon name="chevron-back" size={20} color="#343434" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.paginationArrowNext, (currentPage + 1) * pageSize >= filteredMembers.length && styles.disabledButton]}
+                onPress={handleNextPage}
+                disabled={(currentPage + 1) * pageSize >= filteredMembers.length}
+              >
+                <Icon name="chevron-forward" size={20} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
+    backgroundColor: '#f5f5f5',
   },
-  title: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 24,
-    color: '#333',
+    fontWeight: '500',
+    color: '#ea3838',
+    marginLeft: 8,
   },
-  table: {
-    width: '100%',
-    borderRadius: 5,
+  searchCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    margin: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchInput: {
+    flex: 1,
+    height: 46,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#dadada',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    marginRight: 8,
+    color: '#343434',
+  },
+  searchButton: {
+    backgroundColor: '#ea3838',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchButtonText: {
+    color: '#ffffff',
+    fontWeight: '500',
+    fontSize: 16,
+  },
+  tableCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    margin: 16,
+    marginTop: 0,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#f1f1f1',
+    borderBottomWidth: 1,
+    borderBottomColor: '#dadada',
+    paddingBottom: 12,
+    textAlign:'center',
+    marginLeft:5
+  },
+  headerCell: {
+    fontWeight: '500',
+    color: '#343434',
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderColor: '#ddd',
+    borderBottomColor: '#dadada',
   },
   tableCell: {
     flex: 1,
-    padding: 10,
-    textAlign: 'center',
-    color: 'black',
+    paddingVertical: 12,
+    color: '#343434',
   },
-  headerCell: {
-    fontWeight: 'bold',
-    backgroundColor: '#f7f7f7',
+  cellText: {
+    color: '#343434',
   },
-  linkText: {
-    color: '#007bff',
-    textDecorationLine: 'underline',
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  pageInfo: {
+    fontSize: 14,
+    color: '#343434',
+  },
+  paginationButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paginationArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#dadada',
+    marginRight: 8,
+  },
+  paginationArrowNext: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#343434',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    marginBottom: 50,
-  },
-  paginationButton: {
-    backgroundColor: '#3B82F6',
-    padding: 10,
-    borderRadius: 5,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    position: 'relative',
-  },
-  searchInput: {
-    flex: 1,
-    borderColor: '#ddd',
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 5,
-    marginRight: 10,
-    paddingRight: 40,
-  },
-  searchButton: {
-    backgroundColor: '#3B82F6',
-    padding: 10,
-    borderRadius: 5,
-  },
-  clearButton: {
-    position: 'absolute', // Change to absolute position
-    right: 85, // Adjust as needed to place inside the input
-    top: 12,
-    zIndex: 5, // Adjust as needed to vertically center within input
-  },
-  buttonContainer: {
-    marginBottom: 25,
   },
 });

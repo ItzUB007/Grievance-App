@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Image } from 'react-native';
 import React, { useEffect, useState } from 'react';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function MemberDetails({ route, navigation }) {
   const { member } = route.params;
@@ -22,199 +23,372 @@ export default function MemberDetails({ route, navigation }) {
     return options;
   };
 
+  // Render eligibility status with colored dot
+  const renderEligibilityStatus = (isEligible) => {
+    return (
+      <View style={styles.eligibilityContainer}>
+        <View style={[styles.statusDot, isEligible ? styles.eligibleDot : styles.notEligibleDot]} />
+        <Text style={styles.eligibilityText}>
+          {isEligible ? 'Eligible' : 'Not Eligible'}
+        </Text>
+      </View>
+    );
+  };
+
   if (!member.QuestionAnswers && !member.eligibleSchemes && !member.eligibleDocuments) {
     return (
-      <View style={styles.permissionContainer}>
-        <View style={styles.innerContainer}>
-          <Text style={styles.errorText}>
-            You are not eligible for Schemes
-          </Text>
-          {member.TicketId &&
-            <Text style={styles.baseText}>Available Tickets : {member.TicketId.length} </Text>
-          }
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header */}
+        {/* <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="chevron-back" size={24} color="#ea3838" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Member Details</Text>
+        </View> */}
+        
+        <View style={styles.permissionContainer}>
+          <View style={styles.innerContainer}>
+            <Text style={styles.errorText}>
+            You are not eligible for the scheme. Check scheme eligibility first
+            </Text>
+            
+            {member.TicketId &&
+              <Text style={styles.baseText}> Tickets Applied : {member.TicketId.length} </Text>
+            }
+          </View>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.detailsContainer}>
-        <Text style={styles.baseText}>Member Name : {member.name} </Text>
-        <Text style={styles.baseText}>Member PhoneNo : {member.phoneNumber} </Text>
-        {member.TicketId &&
-          <Text style={styles.baseText}>Available Tickets : {member.TicketId.length} </Text>
-        }
-        {member.eligibleSchemes &&
-          <Text style={styles.baseText}>Eligible Schemes: {member.eligibleSchemes?.length}</Text>
-        }
-        {member.eligibleDocuments &&
-          <Text style={styles.baseText}>Eligible Documents: {member.eligibleDocuments?.length}</Text>
-        }
-      </View>
-      {member.eligibleSchemes && member.eligibleSchemes.length > 0 && (
-        <View style={styles.tableContainer}>
-          <Text style={styles.tableHeader}>Eligible Schemes</Text>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableCellHeader}>Name</Text>
-            <Text style={styles.tableCellHeader}>Eligibility</Text>
-          </View>
-          {member.eligibleSchemes.map((scheme, index) => (
-            <View key={index} style={styles.tableRow}>
-              <TouchableOpacity
-                style={styles.schemeItem}
-                onPress={() => navigation.navigate('Scheme Details', { schemeId: scheme.id })}
-              >
-                <Text style={styles.schemeText}>{scheme.name}</Text>
-              </TouchableOpacity>
-              <Text style={styles.tableCell}>Eligible</Text>
+    <SafeAreaView style={styles.safeArea}>
+      {/* Header */}
+      {/* <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+        >
+          <Icon name="chevron-back" size={24} color="#ea3838" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Member Details</Text>
+      </View> */}
+      
+      <ScrollView style={styles.container}>
+        {/* Member Info Card */}
+        <View style={styles.memberCard}>
+          <View style={styles.memberInfoContainer}>
+            {/* <Image 
+              source={{ uri: member.photoUrl || 'https://via.placeholder.com/100' }} 
+              style={styles.memberPhoto} 
+            /> */}
+            <View style={styles.memberDetails}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Member Name</Text>
+                <Text style={styles.detailColon}>:</Text>
+                <Text style={styles.detailValue}>{member.name}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Phone No.</Text>
+                <Text style={styles.detailColon}>:</Text>
+                <Text style={styles.detailValue}>{member.phoneNumber}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Eligible Scheme</Text>
+                <Text style={styles.detailColon}>:</Text>
+                <Text style={styles.detailValue}>
+                  {member.eligibleSchemes ? member.eligibleSchemes.length : '0'}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Eligible Documents</Text>
+                <Text style={styles.detailColon}>:</Text>
+                <Text style={styles.detailValue}>
+                  {member.eligibleDocuments ? member.eligibleDocuments.length : '0'}
+                </Text>
+              </View>
             </View>
-          ))}
-        </View>
-      )}
-      {member.eligibleDocuments && member.eligibleDocuments.length > 0 && (
-        <View style={styles.tableContainer}>
-          <Text style={styles.tableHeader}>Eligible Documents</Text>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableCellHeader}>Name</Text>
-            <Text style={styles.tableCellHeader}>Eligibility</Text>
           </View>
-          {member.eligibleDocuments.map((document, index) => (
-            <View key={index} style={styles.tableRow}>
-              <TouchableOpacity
-                style={styles.schemeItem}
-                onPress={() => navigation.navigate('Document Details', { schemeId: document.id })}
-              >
-                <Text style={styles.schemeText}>{document.name}</Text>
-              </TouchableOpacity>
-              <Text style={styles.tableCell}>Eligible</Text>
+        </View>
+
+        {/* Eligible Schemes Section */}
+        {member.eligibleSchemes && member.eligibleSchemes.length > 0 && (
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionHeaderText}>Eligible Schemes</Text>
             </View>
-          ))}
-        </View>
-      )}
-      <View style={styles.questionsContainer}>
-        <Text style={styles.questionHeader}>Questions and Selected Options:</Text>
-        {questionAnswers?.map((answer, index) => (
-          <View key={index} style={styles.questionContainer}>
-            <Text style={styles.questionText}>{answer.conceptName}</Text>
-            <Text style={styles.optionText}>
-              Selected Options: {renderSelectedOptions(answer.selectedOptions)}
-            </Text>
+            
+            <View style={styles.tableContainer}>
+              <View style={styles.tableHeaderRow}>
+                <Text style={styles.tableHeaderCell}>Schemes Name</Text>
+                <Text style={styles.tableHeaderCell}>Eligibility</Text>
+              </View>
+              
+              {member.eligibleSchemes.map((scheme, index) => (
+                <View key={index} style={styles.tableRow}>
+                  <TouchableOpacity
+                    style={styles.schemeNameCell}
+                    onPress={() => navigation.navigate('Scheme Details', { schemeId: scheme.id })}
+                  >
+                    <Text style={styles.schemeNameText}>{scheme.name}</Text>
+                  </TouchableOpacity>
+                  <View style={styles.eligibilityCell}>
+                    {renderEligibilityStatus(true)}
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
-        ))}
-      </View>
-    </ScrollView>
+        )}
+
+        {/* Eligible Documents Section */}
+        {member.eligibleDocuments && member.eligibleDocuments.length > 0 && (
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionHeaderText}>Eligible Documents</Text>
+            </View>
+            
+            <View style={styles.tableContainer}>
+              <View style={styles.tableHeaderRow}>
+                <Text style={styles.tableHeaderCell}>Documents Name</Text>
+                <Text style={styles.tableHeaderCell}>Eligibility</Text>
+              </View>
+              
+              {member.eligibleDocuments.map((document, index) => (
+                <View key={index} style={styles.tableRow}>
+                  <TouchableOpacity
+                    style={styles.schemeNameCell}
+                    onPress={() => navigation.navigate('Document Details', { schemeId: document.id })}
+                  >
+                    <Text style={styles.schemeNameText}>{document.name}</Text>
+                  </TouchableOpacity>
+                  <View style={styles.eligibilityCell}>
+                    {renderEligibilityStatus(true)}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Questions and Selected Options - Styled to match the theme */}
+        {questionAnswers && questionAnswers.length > 0 && (
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionHeaderText}>Questions and Selected Options</Text>
+            </View>
+            
+            <View style={styles.questionsContainer}>
+              {questionAnswers.map((answer, index) => (
+                <View key={index} style={styles.questionItem}>
+                  <Text style={styles.questionText}>{answer.conceptName}</Text>
+                  <Text style={styles.optionText}>
+                    Selected Options: {renderSelectedOptions(answer.selectedOptions)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   container: {
     flex: 1,
-    flexDirection: 'column',
-    backgroundColor: '#fff',
-    padding: 20,
+    backgroundColor: '#f5f5f5',
   },
-  schemeItem: {
-    marginVertical: 5,
-    borderRadius: 5,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
   },
-  baseText: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
+  backButton: {
+    padding: 4,
   },
-  schemeText: {
-    fontSize: 14,
-    color: 'blue',
-    textAlign: 'center',
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: '#ea3838',
+    marginLeft: 8,
   },
-  detailsContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    margin: 10,
-    borderRadius: 10,
+  memberCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    margin: 16,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 2,
+  },
+  memberInfoContainer: {
+    flexDirection: 'row',
+  },
+  memberPhoto: {
+    width: 90,
+    height: 90,
+    borderRadius: 4,
+    marginRight: 16,
+  },
+  memberDetails: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  detailLabel: {
+    width: 140,
+    fontSize: 14,
+    color: '#343434',
+  },
+  detailColon: {
+    width: 10,
+    fontSize: 14,
+    color: '#343434',
+  },
+  detailValue: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#343434',
+  },
+  sectionContainer: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sectionHeader: {
+    backgroundColor: '#ea3838',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  sectionHeaderText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   tableContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    margin: 10,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    elevation: 2,
+    padding: 8,
   },
-  tableHeader: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
+  tableHeaderRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#dadada',
+    paddingVertical: 12,
+  },
+  tableHeaderCell: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#343434',
     textAlign: 'center',
   },
   tableRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: '#dadada',
+    paddingVertical: 12,
   },
-  tableCellHeader: {
+  schemeNameCell: {
     flex: 1,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: 'black',
+    justifyContent: 'center',
   },
-  tableCell: {
-    flex: 1,
+  schemeNameText: {
+    fontSize: 14,
+    color: '#343434',
     textAlign: 'center',
-    color: 'black',
+  },
+  eligibilityCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eligibilityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 6,
+  },
+  eligibleDot: {
+    backgroundColor: '#8BC34A',
+  },
+  notEligibleDot: {
+    backgroundColor: '#F44336',
+  },
+  eligibilityText: {
+    fontSize: 14,
+    color: '#343434',
   },
   questionsContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    margin: 10,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    elevation: 2,
+    padding: 16,
   },
-  questionHeader: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-  },
-  questionContainer: {
-    marginBottom: 20,
+  questionItem: {
+    marginBottom: 16,
   },
   questionText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#343434',
+    marginBottom: 4,
   },
   optionText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 14,
+    color: '#666666',
   },
   permissionContainer: {
     flex: 1,
-    flexDirection: 'column',
-    paddingBottom: 106,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
   },
   innerContainer: {
     padding: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    alignItems: 'center',
   },
   errorText: {
-    fontSize: 24, // h4 equivalent in React Native
-    color: 'red', // equivalent to the "error" color
+    fontSize: 18,
+    color: '#ea3838',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  baseText: {
+    fontSize: 14,
+    color: '#666666',
     textAlign: 'center',
   },
 });
