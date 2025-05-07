@@ -89,22 +89,7 @@ export default function ViewFamily({ navigation }) {
   return (
     <ScrollView style={styles.container}>
       {/* <Text style={styles.title}>All Families</Text> */}
-      {/* <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search Families"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-            <Icon name="close-circle" size={24} color="#333" />
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.buttonText}>Search</Text>
-        </TouchableOpacity>
-      </View> */}
+    
 
            <View style={styles.searchCard}>
                 <View style={styles.searchContainer}>

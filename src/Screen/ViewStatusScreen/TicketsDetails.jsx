@@ -15,6 +15,7 @@ import {
   responsiveHeight,
   responsiveFontSize,
 } from 'react-native-responsive-dimensions';
+import { width } from '../../styles/responsiveSize';
 
 
 // Helper function to format Firestore Timestamp
@@ -388,7 +389,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.themewhite,
-    margin: '0 auto'
+    // margin: '0 auto'
   },
   detailsContainer: {
   // borderWidth:0.4,
@@ -511,7 +512,8 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     marginHorizontal: 15,
-    marginTop: 20,
+    // marginTop: 20,
+    marginBottom:width * 0.3
   },
   buttonText: {
     fontSize: 16,

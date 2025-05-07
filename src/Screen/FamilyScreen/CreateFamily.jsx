@@ -7,7 +7,8 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ScrollView, 
-  Alert 
+  Alert,
+  SafeAreaView
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,11 +32,11 @@ export default function CreateFamily({ navigation, route }) {
     setFilteredMembers(members); // Initialize filtered members with all members
   }, [members]);
 
-  const toggleMemberSelection = (memberId) => {
-    if (selectedMembers.includes(memberId)) {
-      setSelectedMembers(selectedMembers.filter(id => id !== memberId));
+  const toggleMemberSelection = (member) => {
+    if (selectedMembers.some(m => m.id === member.id)) {
+      setSelectedMembers(selectedMembers.filter(m => m.id !== member.id));
     } else {
-      setSelectedMembers([...selectedMembers, memberId]);
+      setSelectedMembers([...selectedMembers, member]);
     }
   };
 
@@ -46,8 +47,9 @@ export default function CreateFamily({ navigation, route }) {
     }
     
     try {
-      const familyId = await createFamily(familyName, selectedMembers, members, ProgramId);
-      console.log('FamilyId',familyId)
+      const selectedMemberIds = selectedMembers.map(member => member.id);
+      const familyId = await createFamily(familyName, selectedMemberIds, members, ProgramId);
+      console.log('FamilyId', familyId);
       Alert.alert('Family created and members updated successfully!');
       navigation.navigate('ViewFamily', { familyId });
     } catch (error) {
@@ -86,204 +88,299 @@ export default function CreateFamily({ navigation, route }) {
 
   const startIndex = currentPage * pageSize;
   const currentMembers = filteredMembers.slice(startIndex, startIndex + pageSize);
+  const totalPages = Math.ceil(filteredMembers.length / pageSize);
+  
+  const removeSelectedMember = (memberId) => {
+    setSelectedMembers(selectedMembers.filter(member => member.id !== memberId));
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Create a Family</Text>
-
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={[styles.searchInput,{color:'black'}]}
-          placeholder="Search Members"
-          value={searchQuery}
-          placeholderTextColor={'gray'}
-          onChangeText={setSearchQuery}
+    <SafeAreaView style={styles.safeArea}>
+      {/* Header */}
+      {/* <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+        >
+          <Icon name="chevron-back" size={24} color="#ea3838" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Create a Family</Text>
+      </View> */}
       
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-            <Icon name="close-circle" size={24} color="#333" />
+      <ScrollView style={styles.container}>
+        {/* Top Card Section */}
+        <View style={styles.topCard}>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search Members"
+              placeholderTextColor="#979797"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+              <Text style={styles.searchButtonText}>Search</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Family Name Input */}
+          <TextInput
+            style={styles.familyNameInput}
+            placeholder="Family Name"
+            placeholderTextColor="#979797"
+            value={familyName}
+            onChangeText={setFamilyName}
+          />
+          
+          {/* Selected Members Chips */}
+          <View style={styles.selectedMembersContainer}>
+            {selectedMembers.map((member) => (
+              <View key={member.id} style={styles.memberChip}>
+                <Text style={styles.memberChipText}>{member.name}</Text>
+                <TouchableOpacity onPress={() => removeSelectedMember(member.id)}>
+                  <Icon name="close-circle" size={20} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+          
+          {/* Create Family Button */}
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={handleCreateFamily}
+            disabled={!familyName || selectedMembers.length === 0}
+          >
+            <Text style={styles.createButtonText}>Create Family</Text>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.buttonText}>Search</Text>
-        </TouchableOpacity>
-      </View>
-      <TextInput
-        style={[styles.input,{color:'black'}]}
-        placeholder="Enter Family Name"
-        placeholderTextColor={'gray'}
-        value={familyName}
-        onChangeText={setFamilyName}
-      />
-      <TouchableOpacity
-        style={[styles.createButton, (!familyName || selectedMembers.length === 0) && styles.disabledButton]}
-        onPress={handleCreateFamily}
-      >
-        <Text style={[
-          styles.buttonText,
-          (!familyName || selectedMembers.length === 0) && styles.disabledButtonText
-        ]}>
-          Create a Family
-        </Text>
-      </TouchableOpacity>
-      <Text style={styles.subtitle}>Select Members:</Text>
-      <View style={styles.tableHeader}>
-        <Text style={[styles.tableCell, styles.headerCell]}>Name</Text>
-        <Text style={[styles.tableCell, styles.headerCell]}>Aadhar No</Text>
-        <Text style={[styles.tableCell, styles.headerCell]}>Phone No</Text>
-      </View>
-      {currentMembers.map((member) => (
-        <TouchableOpacity
-          key={member.id}
-          style={[styles.tableRow, selectedMembers.includes(member.id) ? styles.selectedRow : null]}
-          onPress={() => toggleMemberSelection(member.id)}
-        >
-          <Text style={styles.tableCell}>{member.name}</Text>
-          <Text style={styles.tableCell}>{member.AadharlastFourDigits}</Text>
-          <Text style={styles.tableCell}>{member.phoneNumber}</Text>
-        </TouchableOpacity>
-      ))}
-
-      <View style={styles.paginationContainer}>
-        <TouchableOpacity
-          style={styles.paginationButton}
-          onPress={handlePrevPage}
-          disabled={currentPage === 0}
-        >
-          <Text style={styles.buttonText}>Previous</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.paginationButton}
-          onPress={handleNextPage}
-          disabled={(currentPage + 1) * pageSize >= filteredMembers.length}
-        >
-          <Text style={styles.buttonText}>Next</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        </View>
+        
+        {/* Members Table */}
+        <View style={styles.tableCard}>
+          <View style={styles.tableHeader}>
+            <Text style={styles.headerCell}>Name</Text>
+            <Text style={styles.headerCell}>Aadhar No.</Text>
+            <Text style={styles.headerCell}>Phone No.</Text>
+          </View>
+          
+          {currentMembers.map((member) => (
+            <TouchableOpacity
+              key={member.id}
+              style={[
+                styles.tableRow,
+                selectedMembers.some(m => m.id === member.id) && styles.selectedRow
+              ]}
+              onPress={() => toggleMemberSelection(member)}
+            >
+              <Text style={styles.tableCell}>{member.name}</Text>
+              <Text style={styles.tableCell}>{member.AadharlastFourDigits}</Text>
+              <Text style={styles.tableCell}>{member.phoneNumber}</Text>
+            </TouchableOpacity>
+          ))}
+          
+          {/* Pagination */}
+          <View style={styles.paginationContainer}>
+            <Text style={styles.pageInfo}>Page {currentPage + 1} of {totalPages}</Text>
+            <View style={styles.paginationButtons}>
+              <TouchableOpacity
+                style={[styles.paginationArrow, currentPage === 0 && styles.disabledButton]}
+                onPress={handlePrevPage}
+                disabled={currentPage === 0}
+              >
+                <Icon name="chevron-back" size={20} color="#343434" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.paginationArrowNext, (currentPage + 1) * pageSize >= filteredMembers.length && styles.disabledButton]}
+                onPress={handleNextPage}
+                disabled={(currentPage + 1) * pageSize >= filteredMembers.length}
+              >
+                <Icon name="chevron-forward" size={20} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
   },
-  title: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
+    fontWeight: '500',
+    color: '#ea3838',
+    marginLeft: 8,
   },
-  input: {
-    borderColor: '#ddd',
-    borderWidth: 1,
-    padding: 10,
-    marginBottom: 20,
-    borderRadius: 5,
+  topCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    margin: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    position: 'relative'
+    marginBottom: 16,
   },
   searchInput: {
     flex: 1,
-    borderColor: '#ddd',
+    height: 46,
     borderWidth: 1,
-    padding: 10,
-    borderRadius: 5,
-    marginRight: 10,
-    paddingRight: 40,
-  },
-  clearButton: {
-    position: 'absolute', // Change to absolute position
-    right: 85, // Adjust as needed to place inside the input
-    top: 12,
-    zIndex: 5 // Adjust as needed to vertically center within input
+    borderColor: '#dadada',
+    borderRadius: 50,
+    paddingHorizontal: 16,
+    marginRight: 8,
+    color: '#343434',
   },
   searchButton: {
-    backgroundColor: '#3B82F6',
-    padding: 10,
-    borderRadius: 5,
+    backgroundColor: '#ea3838',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  subtitle: {
+  searchButtonText: {
+    color: '#ffffff',
+    fontWeight: '500',
     fontSize: 16,
-    marginBottom: 10,
   },
-  memberItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+  familyNameInput: {
+    height: 46,
+    borderWidth: 1,
+    borderColor: '#dadada',
+    borderRadius: 50,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    color: '#343434',
   },
-  text: {
-    color: 'black',
-  },
-  selectedText: {
-    color: '#3B82F6',
-    fontWeight: 'bold',
-  },
-  paginationContainer: {
+  selectedMembersContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
+    flexWrap: 'wrap',
+    marginBottom: 16,
   },
-  paginationButton: {
-    backgroundColor: '#3B82F6',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 50,
+  memberChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#343434',
+    borderRadius: 50,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  memberChipText: {
+    color: '#ffffff',
+    marginRight: 4,
+    fontSize: 14,
   },
   createButton: {
-    backgroundColor: '#6200ee',
-    padding: 10,
-    borderRadius: 5,
+    backgroundColor: '#ea3838',
+    paddingVertical: 14,
+    borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 5,
   },
-  buttonText: {
-    color: '#fff',
+  createButtonText: {
+    color: '#ffffff',
+    fontWeight: '500',
     fontSize: 16,
-    fontWeight: 'bold',
-  }, tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#f1f1f1',
+  },
+  tableCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    margin: 16,
+    marginTop: 0,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#f1f1f1',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: '#dadada',
+    paddingBottom: 12,
+  },
+  headerCell: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#343434',
+    textAlign: 'center',
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderColor: '#ddd',
-    paddingVertical: 10,
+    borderBottomColor: '#dadada',
+    paddingVertical: 12,
   },
   tableCell: {
     flex: 1,
-    paddingHorizontal: 10,
+    fontSize: 14,
+    color: '#343434',
     textAlign: 'center',
-    color: 'black',
-  },
-  headerCell: {
-    fontWeight: 'bold',
-    backgroundColor: '#f7f7f7',
   },
   selectedRow: {
-    backgroundColor: '#e0f7fa',
-  }, disabledButton: {
-    backgroundColor: '#B0C4DE', // Light gray color for disabled state
-    opacity: 0.8,
-    color: '#B0C4DE'// Reduce opacity to indicate disabled state
-  }, disabledButtonText: {
-    color: '#000000', // Black color for disabled state text
+    backgroundColor: '#f5f5f5',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  pageInfo: {
+    fontSize: 14,
+    color: '#343434',
+  },
+  paginationButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paginationArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#dadada',
+    marginRight: 8,
+  },
+  paginationArrowNext: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#343434',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 });
